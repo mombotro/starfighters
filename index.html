@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Walking Kirby</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #87CEEB;
+        }
+
+        #character {
+            position: absolute;
+            width: 32px;
+            height: 32px;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+        }
+
+        #logo {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+            z-index: 10;
+        }
+
+        #credit {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            color: #333;
+            z-index: 10;
+        }
+
+        #credit a {
+            color: #0066cc;
+            text-decoration: none;
+        }
+
+        #credit a:hover {
+            text-decoration: underline;
+        }
+
+        #link-list {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            font-family: Arial, sans-serif;
+            background-color: rgba(255, 255, 255, 0.9);
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            z-index: 10;
+        }
+
+        #link-list h3 {
+            margin: 0 0 10px 0;
+            font-size: 16px;
+            color: #333;
+        }
+
+        #link-list ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        #link-list li {
+            margin: 5px 0;
+        }
+
+        #link-list a {
+            color: #0066cc;
+            text-decoration: none;
+            font-size: 14px;
+        }
+
+        #link-list a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div id="link-list">
+        <h3>Ga-do-go's favorite things</h3>
+        <ul>
+            <li><a href="https://www.lexaloffle.com/bbs/?pid=172533#p" target="_blank">play my game</a></li>
+        </ul>
+    </div>
+    <img id="logo" src="assets/gadogo.png" alt="Gadogo">
+    <canvas id="character"></canvas>
+    <div id="credit">Sprite: <a href="https://www.pixil.art/art/kirby-sprites-e47ffff67cb5be7" target="_blank">Kirby Sprites</a></div>
+
+    <script>
+        const canvas = document.getElementById('character');
+        const ctx = canvas.getContext('2d');
+
+        // Load sprite sheet
+        const spriteSheet = new Image();
+        spriteSheet.src = 'assets/kirby walk.png';
+
+        // Character state
+        const character = {
+            x: window.innerWidth / 2,
+            y: window.innerHeight / 2,
+            speed: 2,
+            targetX: window.innerWidth / 2,
+            targetY: window.innerHeight / 2,
+            currentFrame: 0,
+            frameWidth: 32, // Each frame is 32x32 pixels
+            frameHeight: 32,
+            animationSpeed: 0.15,
+            animationCounter: 0,
+            isMoving: false,
+            facingRight: true
+        };
+
+        // Set canvas size
+        canvas.width = 32;
+        canvas.height = 32;
+        canvas.style.width = '64px';
+        canvas.style.height = '64px';
+
+        function drawCharacter() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Determine which frame to show
+            let frameX = character.currentFrame * character.frameWidth;
+
+            // Save context state
+            ctx.save();
+
+            // Flip horizontally if facing left
+            if (!character.facingRight) {
+                ctx.translate(canvas.width, 0);
+                ctx.scale(-1, 1);
+            }
+
+            // Draw the sprite
+            ctx.drawImage(
+                spriteSheet,
+                frameX, 0, // Source x, y
+                character.frameWidth, character.frameHeight, // Source width, height
+                0, 0, // Destination x, y
+                canvas.width, canvas.height // Destination width, height (scaled up)
+            );
+
+            // Restore context state
+            ctx.restore();
+        }
+
+        function updateAnimation() {
+            if (character.isMoving) {
+                character.animationCounter += character.animationSpeed;
+                if (character.animationCounter >= 1) {
+                    character.animationCounter = 0;
+                    // Cycle through walk frames (1, 2, 3)
+                    character.currentFrame++;
+                    if (character.currentFrame > 3) {
+                        character.currentFrame = 1;
+                    }
+                }
+            } else {
+                // Idle frame
+                character.currentFrame = 0;
+            }
+        }
+
+        function moveCharacter() {
+            const dx = character.targetX - character.x;
+            const dy = character.targetY - character.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+
+            if (distance > 5) {
+                character.isMoving = true;
+                const angle = Math.atan2(dy, dx);
+                character.x += Math.cos(angle) * character.speed;
+                character.y += Math.sin(angle) * character.speed;
+
+                // Update facing direction based on horizontal movement
+                if (dx > 0) {
+                    character.facingRight = true;
+                } else if (dx < 0) {
+                    character.facingRight = false;
+                }
+            } else {
+                character.isMoving = false;
+            }
+
+            // Update canvas position
+            canvas.style.left = character.x + 'px';
+            canvas.style.top = character.y + 'px';
+        }
+
+        function gameLoop() {
+            moveCharacter();
+            updateAnimation();
+            drawCharacter();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Track mouse position
+        window.addEventListener('mousemove', (e) => {
+            character.targetX = e.clientX - 32; // Center on cursor
+            character.targetY = e.clientY - 32;
+        });
+
+        // Start when sprite sheet loads
+        spriteSheet.onload = () => {
+            gameLoop();
+        };
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            if (character.x > window.innerWidth - 64) character.x = window.innerWidth - 64;
+            if (character.y > window.innerHeight - 64) character.y = window.innerHeight - 64;
+        });
+    </script>
+</body>
+</html>
