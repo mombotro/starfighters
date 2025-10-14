@@ -12,7 +12,7 @@
             background-color: #87CEEB;
         }
 
-        #character {
+        .character {
             position: absolute;
             width: 32px;
             height: 32px;
@@ -96,85 +96,91 @@
         </ul>
     </div>
     <img id="logo" src="assets/gadogo.png" alt="Gadogo">
-    <canvas id="character"></canvas>
+    <div id="characters-container"></div>
     <div id="credit">Sprite: <a href="https://www.pixil.art/art/kirby-sprites-e47ffff67cb5be7" target="_blank">Kirby Sprites</a></div>
 
     <script>
-        const canvas = document.getElementById('character');
-        const ctx = canvas.getContext('2d');
-
         // Load sprite sheet
         const spriteSheet = new Image();
         spriteSheet.src = 'assets/kirby walk.png';
 
-        // Character state
-        const character = {
-            x: window.innerWidth / 2,
-            y: window.innerHeight / 2,
-            speed: 2,
-            targetX: window.innerWidth / 2,
-            targetY: window.innerHeight / 2,
-            currentFrame: 0,
-            frameWidth: 32, // Each frame is 32x32 pixels
-            frameHeight: 32,
-            animationSpeed: 0.15,
-            animationCounter: 0,
-            isMoving: false,
-            facingRight: true
-        };
+        const characters = [];
+        const NUM_CHARACTERS = 20;
 
-        // Set canvas size
-        canvas.width = 32;
-        canvas.height = 32;
-        canvas.style.width = '64px';
-        canvas.style.height = '64px';
+        // Create a character object
+        function createCharacter() {
+            const canvas = document.createElement('canvas');
+            canvas.className = 'character';
+            canvas.width = 32;
+            canvas.height = 32;
 
-        function drawCharacter() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const ctx = canvas.getContext('2d');
 
-            // Determine which frame to show
-            let frameX = character.currentFrame * character.frameWidth;
+            const character = {
+                canvas: canvas,
+                ctx: ctx,
+                x: Math.random() * (window.innerWidth - 64),
+                y: Math.random() * (window.innerHeight - 64),
+                speed: 1 + Math.random() * 2,
+                targetX: Math.random() * window.innerWidth,
+                targetY: Math.random() * window.innerHeight,
+                currentFrame: 0,
+                frameWidth: 32,
+                frameHeight: 32,
+                animationSpeed: 0.1 + Math.random() * 0.1,
+                animationCounter: 0,
+                isMoving: false,
+                facingRight: true,
+                hue: Math.random() * 360, // Random hue for color variation
+                targetChangeTimer: Math.random() * 120 // Random initial timer
+            };
 
-            // Save context state
-            ctx.save();
+            // Apply hue rotation filter for random color
+            canvas.style.filter = `hue-rotate(${character.hue}deg)`;
 
-            // Flip horizontally if facing left
-            if (!character.facingRight) {
-                ctx.translate(canvas.width, 0);
-                ctx.scale(-1, 1);
-            }
-
-            // Draw the sprite
-            ctx.drawImage(
-                spriteSheet,
-                frameX, 0, // Source x, y
-                character.frameWidth, character.frameHeight, // Source width, height
-                0, 0, // Destination x, y
-                canvas.width, canvas.height // Destination width, height (scaled up)
-            );
-
-            // Restore context state
-            ctx.restore();
+            document.getElementById('characters-container').appendChild(canvas);
+            return character;
         }
 
-        function updateAnimation() {
+        function drawCharacter(character) {
+            character.ctx.clearRect(0, 0, character.canvas.width, character.canvas.height);
+
+            let frameX = character.currentFrame * character.frameWidth;
+
+            character.ctx.save();
+
+            if (!character.facingRight) {
+                character.ctx.translate(character.canvas.width, 0);
+                character.ctx.scale(-1, 1);
+            }
+
+            character.ctx.drawImage(
+                spriteSheet,
+                frameX, 0,
+                character.frameWidth, character.frameHeight,
+                0, 0,
+                character.canvas.width, character.canvas.height
+            );
+
+            character.ctx.restore();
+        }
+
+        function updateAnimation(character) {
             if (character.isMoving) {
                 character.animationCounter += character.animationSpeed;
                 if (character.animationCounter >= 1) {
                     character.animationCounter = 0;
-                    // Cycle through walk frames (1, 2, 3)
                     character.currentFrame++;
                     if (character.currentFrame > 3) {
                         character.currentFrame = 1;
                     }
                 }
             } else {
-                // Idle frame
                 character.currentFrame = 0;
             }
         }
 
-        function moveCharacter() {
+        function moveCharacter(character) {
             const dx = character.targetX - character.x;
             const dy = character.targetY - character.y;
             const distance = Math.sqrt(dx * dx + dy * dy);
@@ -185,7 +191,6 @@
                 character.x += Math.cos(angle) * character.speed;
                 character.y += Math.sin(angle) * character.speed;
 
-                // Update facing direction based on horizontal movement
                 if (dx > 0) {
                     character.facingRight = true;
                 } else if (dx < 0) {
@@ -193,35 +198,48 @@
                 }
             } else {
                 character.isMoving = false;
+
+                // Pick a new random target when reaching the current one
+                character.targetChangeTimer--;
+                if (character.targetChangeTimer <= 0) {
+                    character.targetX = Math.random() * (window.innerWidth - 64);
+                    character.targetY = Math.random() * (window.innerHeight - 64);
+                    character.targetChangeTimer = 60 + Math.random() * 120;
+                }
             }
 
-            // Update canvas position
-            canvas.style.left = character.x + 'px';
-            canvas.style.top = character.y + 'px';
+            // Keep within bounds
+            character.x = Math.max(0, Math.min(window.innerWidth - 64, character.x));
+            character.y = Math.max(0, Math.min(window.innerHeight - 64, character.y));
+
+            character.canvas.style.left = character.x + 'px';
+            character.canvas.style.top = character.y + 'px';
         }
 
         function gameLoop() {
-            moveCharacter();
-            updateAnimation();
-            drawCharacter();
+            characters.forEach(character => {
+                moveCharacter(character);
+                updateAnimation(character);
+                drawCharacter(character);
+            });
             requestAnimationFrame(gameLoop);
         }
 
-        // Track mouse position
-        window.addEventListener('mousemove', (e) => {
-            character.targetX = e.clientX - 32; // Center on cursor
-            character.targetY = e.clientY - 32;
-        });
-
         // Start when sprite sheet loads
         spriteSheet.onload = () => {
+            // Create all characters
+            for (let i = 0; i < NUM_CHARACTERS; i++) {
+                characters.push(createCharacter());
+            }
             gameLoop();
         };
 
         // Handle window resize
         window.addEventListener('resize', () => {
-            if (character.x > window.innerWidth - 64) character.x = window.innerWidth - 64;
-            if (character.y > window.innerHeight - 64) character.y = window.innerHeight - 64;
+            characters.forEach(character => {
+                if (character.x > window.innerWidth - 64) character.x = window.innerWidth - 64;
+                if (character.y > window.innerHeight - 64) character.y = window.innerHeight - 64;
+            });
         });
     </script>
 </body>
