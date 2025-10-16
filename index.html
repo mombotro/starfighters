@@ -5,9 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Walking Kirby</title>
     <style>
-        body {
+        html, body {
             margin: 0;
             padding: 0;
+            width: 100%;
+            height: 100%;
             overflow: hidden;
             background-color: #87CEEB;
         }
@@ -23,8 +25,9 @@
         #logo {
             position: absolute;
             top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
+            right: 20px;
+            width: 120px;
+            height: auto;
             image-rendering: pixelated;
             image-rendering: crisp-edges;
             z-index: 10;
@@ -100,12 +103,29 @@
     <div id="credit">Sprite: <a href="https://www.pixil.art/art/kirby-sprites-e47ffff67cb5be7" target="_blank">Kirby Sprites</a></div>
 
     <script>
-        // Load sprite sheet
+        // Load sprite sheets
         const spriteSheet = new Image();
         spriteSheet.src = 'assets/kirby walk.png';
 
+        const crabSprite = new Image();
+        crabSprite.src = 'assets/crab-enemy.png';
+
+        const spikeSprite = new Image();
+        spikeSprite.src = 'assets/spike-enemy.png';
+
         const characters = [];
+        const enemies = [];
         const NUM_CHARACTERS = 20;
+        const NUM_ENEMIES = 5;
+
+        // Get viewport dimensions
+        function getViewportWidth() {
+            return window.innerWidth;
+        }
+
+        function getViewportHeight() {
+            return window.innerHeight;
+        }
 
         // Create a character object
         function createCharacter() {
@@ -119,11 +139,13 @@
             const character = {
                 canvas: canvas,
                 ctx: ctx,
-                x: Math.random() * (window.innerWidth - 64),
-                y: Math.random() * (window.innerHeight - 64),
+                x: Math.random() * (getViewportWidth() - 64),
+                y: Math.random() * (getViewportHeight() - 64),
+                vx: 0, // velocity x
+                vy: 0, // velocity y
                 speed: 1 + Math.random() * 2,
-                targetX: Math.random() * window.innerWidth,
-                targetY: Math.random() * window.innerHeight,
+                targetX: Math.random() * getViewportWidth(),
+                targetY: Math.random() * getViewportHeight(),
                 currentFrame: 0,
                 frameWidth: 32,
                 frameHeight: 32,
@@ -140,6 +162,34 @@
 
             document.getElementById('characters-container').appendChild(canvas);
             return character;
+        }
+
+        // Create an enemy object
+        function createEnemy(type) {
+            const canvas = document.createElement('canvas');
+            canvas.className = 'character';
+            canvas.width = 32;
+            canvas.height = 32;
+
+            const ctx = canvas.getContext('2d');
+
+            const enemy = {
+                type: type, // 'crab' or 'spike'
+                canvas: canvas,
+                ctx: ctx,
+                x: Math.random() * (getViewportWidth() - 64),
+                y: Math.random() * (getViewportHeight() - 64),
+                vx: 0, // velocity x
+                vy: 0, // velocity y
+                speed: 0.5 + Math.random() * 1.5,
+                targetX: Math.random() * getViewportWidth(),
+                targetY: Math.random() * getViewportHeight(),
+                facingRight: true,
+                targetChangeTimer: Math.random() * 120
+            };
+
+            document.getElementById('characters-container').appendChild(canvas);
+            return enemy;
         }
 
         function drawCharacter(character) {
@@ -165,6 +215,29 @@
             character.ctx.restore();
         }
 
+        function drawEnemy(enemy) {
+            enemy.ctx.clearRect(0, 0, enemy.canvas.width, enemy.canvas.height);
+
+            const sprite = enemy.type === 'crab' ? crabSprite : spikeSprite;
+
+            enemy.ctx.save();
+
+            if (!enemy.facingRight) {
+                enemy.ctx.translate(enemy.canvas.width, 0);
+                enemy.ctx.scale(-1, 1);
+            }
+
+            enemy.ctx.drawImage(
+                sprite,
+                0, 0,
+                sprite.width, sprite.height,
+                0, 0,
+                enemy.canvas.width, enemy.canvas.height
+            );
+
+            enemy.ctx.restore();
+        }
+
         function updateAnimation(character) {
             if (character.isMoving) {
                 character.animationCounter += character.animationSpeed;
@@ -181,6 +254,10 @@
         }
 
         function moveCharacter(character) {
+            // Apply velocity damping (friction)
+            character.vx *= 0.85;
+            character.vy *= 0.85;
+
             const dx = character.targetX - character.x;
             const dy = character.targetY - character.y;
             const distance = Math.sqrt(dx * dx + dy * dy);
@@ -188,8 +265,8 @@
             if (distance > 5) {
                 character.isMoving = true;
                 const angle = Math.atan2(dy, dx);
-                character.x += Math.cos(angle) * character.speed;
-                character.y += Math.sin(angle) * character.speed;
+                character.vx += Math.cos(angle) * character.speed * 0.3;
+                character.vy += Math.sin(angle) * character.speed * 0.3;
 
                 if (dx > 0) {
                     character.facingRight = true;
@@ -202,43 +279,222 @@
                 // Pick a new random target when reaching the current one
                 character.targetChangeTimer--;
                 if (character.targetChangeTimer <= 0) {
-                    character.targetX = Math.random() * (window.innerWidth - 64);
-                    character.targetY = Math.random() * (window.innerHeight - 64);
+                    character.targetX = Math.random() * (getViewportWidth() - 64);
+                    character.targetY = Math.random() * (getViewportHeight() - 64);
                     character.targetChangeTimer = 60 + Math.random() * 120;
                 }
             }
 
-            // Keep within bounds
-            character.x = Math.max(0, Math.min(window.innerWidth - 64, character.x));
-            character.y = Math.max(0, Math.min(window.innerHeight - 64, character.y));
+            // Apply velocity to position
+            character.x += character.vx;
+            character.y += character.vy;
+
+            // Keep within bounds and bounce off edges
+            const maxX = getViewportWidth() - 64;
+            const maxY = getViewportHeight() - 64;
+
+            if (character.x <= 0 || character.x >= maxX) {
+                character.vx *= -0.5; // Bounce with damping
+                character.x = Math.max(0, Math.min(maxX, character.x));
+                // Set new target away from edge
+                character.targetX = maxX / 2 + (Math.random() - 0.5) * maxX * 0.5;
+                character.targetChangeTimer = 60 + Math.random() * 120;
+            }
+
+            if (character.y <= 0 || character.y >= maxY) {
+                character.vy *= -0.5; // Bounce with damping
+                character.y = Math.max(0, Math.min(maxY, character.y));
+                // Set new target away from edge
+                character.targetY = maxY / 2 + (Math.random() - 0.5) * maxY * 0.5;
+                character.targetChangeTimer = 60 + Math.random() * 120;
+            }
 
             character.canvas.style.left = character.x + 'px';
             character.canvas.style.top = character.y + 'px';
         }
 
+        function moveEnemy(enemy) {
+            // Apply velocity damping (friction)
+            enemy.vx *= 0.85;
+            enemy.vy *= 0.85;
+
+            const dx = enemy.targetX - enemy.x;
+            const dy = enemy.targetY - enemy.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+
+            if (distance > 5) {
+                const angle = Math.atan2(dy, dx);
+                enemy.vx += Math.cos(angle) * enemy.speed * 0.3;
+                enemy.vy += Math.sin(angle) * enemy.speed * 0.3;
+
+                if (dx > 0) {
+                    enemy.facingRight = true;
+                } else if (dx < 0) {
+                    enemy.facingRight = false;
+                }
+            } else {
+                // Pick a new random target when reaching the current one
+                enemy.targetChangeTimer--;
+                if (enemy.targetChangeTimer <= 0) {
+                    enemy.targetX = Math.random() * (getViewportWidth() - 64);
+                    enemy.targetY = Math.random() * (getViewportHeight() - 64);
+                    enemy.targetChangeTimer = 60 + Math.random() * 120;
+                }
+            }
+
+            // Apply velocity to position
+            enemy.x += enemy.vx;
+            enemy.y += enemy.vy;
+
+            // Keep within bounds and bounce off edges
+            const maxX = getViewportWidth() - 64;
+            const maxY = getViewportHeight() - 64;
+
+            if (enemy.x <= 0 || enemy.x >= maxX) {
+                enemy.vx *= -0.5; // Bounce with damping
+                enemy.x = Math.max(0, Math.min(maxX, enemy.x));
+                // Set new target away from edge
+                enemy.targetX = maxX / 2 + (Math.random() - 0.5) * maxX * 0.5;
+                enemy.targetChangeTimer = 60 + Math.random() * 120;
+            }
+
+            if (enemy.y <= 0 || enemy.y >= maxY) {
+                enemy.vy *= -0.5; // Bounce with damping
+                enemy.y = Math.max(0, Math.min(maxY, enemy.y));
+                // Set new target away from edge
+                enemy.targetY = maxY / 2 + (Math.random() - 0.5) * maxY * 0.5;
+                enemy.targetChangeTimer = 60 + Math.random() * 120;
+            }
+
+            enemy.canvas.style.left = enemy.x + 'px';
+            enemy.canvas.style.top = enemy.y + 'px';
+        }
+
+        // Check collision between two entities
+        function checkCollision(entity1, entity2) {
+            const dx = entity1.x - entity2.x;
+            const dy = entity1.y - entity2.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            return distance < 32; // Collision if within sprite size
+        }
+
+        // Handle collision with repulsion
+        function handleCollision(entity1, entity2) {
+            const dx = entity1.x - entity2.x;
+            const dy = entity1.y - entity2.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+
+            if (distance === 0) return; // Avoid division by zero
+
+            // Normalize the direction vector
+            const nx = dx / distance;
+            const ny = dy / distance;
+
+            // Randomly choose which entity to repel
+            const repelFirst = Math.random() < 0.5;
+            const repelForce = 8; // Velocity impulse strength
+
+            if (repelFirst) {
+                // Repel entity1 by adding velocity
+                entity1.vx += nx * repelForce;
+                entity1.vy += ny * repelForce;
+                // Set new target away from collision
+                entity1.targetX = entity1.x + nx * 150;
+                entity1.targetY = entity1.y + ny * 150;
+                entity1.targetChangeTimer = 60 + Math.random() * 120;
+            } else {
+                // Repel entity2 by adding velocity
+                entity2.vx -= nx * repelForce;
+                entity2.vy -= ny * repelForce;
+                // Set new target away from collision
+                entity2.targetX = entity2.x - nx * 150;
+                entity2.targetY = entity2.y - ny * 150;
+                entity2.targetChangeTimer = 60 + Math.random() * 120;
+            }
+        }
+
+        // Check all collisions
+        function checkCollisions() {
+            // Check each character against each enemy
+            for (let i = 0; i < characters.length; i++) {
+                for (let j = 0; j < enemies.length; j++) {
+                    if (checkCollision(characters[i], enemies[j])) {
+                        handleCollision(characters[i], enemies[j]);
+                    }
+                }
+            }
+        }
+
         function gameLoop() {
+            // Update characters
             characters.forEach(character => {
                 moveCharacter(character);
                 updateAnimation(character);
                 drawCharacter(character);
             });
+
+            // Update enemies
+            enemies.forEach(enemy => {
+                moveEnemy(enemy);
+                drawEnemy(enemy);
+            });
+
+            // Check collisions
+            checkCollisions();
+
             requestAnimationFrame(gameLoop);
         }
 
-        // Start when sprite sheet loads
-        spriteSheet.onload = () => {
-            // Create all characters
-            for (let i = 0; i < NUM_CHARACTERS; i++) {
-                characters.push(createCharacter());
+        // Track loaded sprites
+        let spritesLoaded = 0;
+        const totalSprites = 3;
+
+        function checkAllSpritesLoaded() {
+            spritesLoaded++;
+            if (spritesLoaded === totalSprites) {
+                // Create all characters
+                for (let i = 0; i < NUM_CHARACTERS; i++) {
+                    characters.push(createCharacter());
+                }
+
+                // Create enemies (mix of crabs and spikes)
+                for (let i = 0; i < NUM_ENEMIES; i++) {
+                    const type = Math.random() < 0.5 ? 'crab' : 'spike';
+                    enemies.push(createEnemy(type));
+                }
+
+                gameLoop();
             }
-            gameLoop();
-        };
+        }
+
+        // Start when all sprites load
+        spriteSheet.onload = checkAllSpritesLoaded;
+        crabSprite.onload = checkAllSpritesLoaded;
+        spikeSprite.onload = checkAllSpritesLoaded;
 
         // Handle window resize
         window.addEventListener('resize', () => {
+            const maxX = getViewportWidth() - 64;
+            const maxY = getViewportHeight() - 64;
+
             characters.forEach(character => {
-                if (character.x > window.innerWidth - 64) character.x = window.innerWidth - 64;
-                if (character.y > window.innerHeight - 64) character.y = window.innerHeight - 64;
+                // Clamp position to new bounds
+                if (character.x > maxX) character.x = maxX;
+                if (character.y > maxY) character.y = maxY;
+
+                // Clamp target to new bounds
+                if (character.targetX > maxX) character.targetX = Math.random() * maxX;
+                if (character.targetY > maxY) character.targetY = Math.random() * maxY;
+            });
+
+            enemies.forEach(enemy => {
+                // Clamp position to new bounds
+                if (enemy.x > maxX) enemy.x = maxX;
+                if (enemy.y > maxY) enemy.y = maxY;
+
+                // Clamp target to new bounds
+                if (enemy.targetX > maxX) enemy.targetX = Math.random() * maxX;
+                if (enemy.targetY > maxY) enemy.targetY = Math.random() * maxY;
             });
         });
     </script>
