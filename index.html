@@ -108,41 +108,68 @@
             text-decoration: underline;
         }
 
-        #control-button {
+        #top-controls {
             position: absolute;
-            bottom: 20px;
-            right: 20px;
-            padding: 12px 24px;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 15px;
+            align-items: flex-start;
+            z-index: 10;
+            flex-wrap: wrap;
+            justify-content: center;
+            max-width: 90%;
+        }
+
+        #control-panel {
             font-family: Arial, sans-serif;
+            background-color: rgba(255, 255, 255, 0.9);
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        #control-panel h4 {
+            margin: 0 0 10px 0;
             font-size: 14px;
+            color: #333;
+        }
+
+        .player-controls {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 5px;
+        }
+
+        .control-button {
+            padding: 8px 16px;
+            font-family: Arial, sans-serif;
+            font-size: 12px;
             font-weight: bold;
             background-color: #ff69b4;
             color: white;
-            border: 3px solid #ff1493;
-            border-radius: 8px;
+            border: 2px solid #ff1493;
+            border-radius: 6px;
             cursor: pointer;
-            z-index: 10;
             transition: all 0.2s;
         }
 
-        #control-button:hover {
+        .control-button:hover {
             background-color: #ff1493;
             transform: scale(1.05);
         }
 
-        #control-button.active {
+        .control-button.active {
             background-color: #32cd32;
             border-color: #228b22;
         }
 
-        #control-button.active:hover {
+        .control-button.active:hover {
             background-color: #228b22;
         }
 
         #spawn-button {
-            position: absolute;
-            bottom: 70px;
-            right: 20px;
             padding: 12px 24px;
             font-family: Arial, sans-serif;
             font-size: 14px;
@@ -152,8 +179,8 @@
             border: 3px solid #ff6600;
             border-radius: 8px;
             cursor: pointer;
-            z-index: 10;
             transition: all 0.2s;
+            align-self: center;
         }
 
         #spawn-button:hover {
@@ -163,8 +190,9 @@
 
         #stats {
             position: absolute;
-            bottom: 120px;
-            right: 20px;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
             font-family: Arial, sans-serif;
             background-color: rgba(255, 255, 255, 0.9);
             padding: 15px;
@@ -191,6 +219,116 @@
             font-weight: bold;
             color: #333;
         }
+
+        #controls {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: Arial, sans-serif;
+            background-color: rgba(255, 255, 255, 0.9);
+            padding: 10px 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            z-index: 10;
+            font-size: 14px;
+            color: #666;
+            text-align: center;
+            display: none;
+        }
+
+        #controls.show {
+            display: block;
+        }
+
+        #controls strong {
+            color: #333;
+        }
+
+        #touch-controls {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 250px;
+            pointer-events: none;
+            z-index: 15;
+            display: none;
+        }
+
+        #touch-controls.show {
+            display: block;
+        }
+
+        #joystick-container {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            width: 150px;
+            height: 150px;
+            pointer-events: auto;
+        }
+
+        #joystick-base {
+            width: 150px;
+            height: 150px;
+            background-color: rgba(100, 100, 100, 0.3);
+            border: 3px solid rgba(255, 255, 255, 0.5);
+            border-radius: 50%;
+            position: absolute;
+        }
+
+        #joystick-stick {
+            width: 60px;
+            height: 60px;
+            background-color: rgba(255, 255, 255, 0.6);
+            border: 3px solid rgba(255, 255, 255, 0.8);
+            border-radius: 50%;
+            position: absolute;
+            top: 45px;
+            left: 45px;
+            transition: all 0.1s;
+        }
+
+        #slash-button {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            width: 100px;
+            height: 100px;
+            background-color: rgba(255, 69, 180, 0.6);
+            border: 4px solid rgba(255, 20, 147, 0.8);
+            border-radius: 50%;
+            font-family: Arial, sans-serif;
+            font-size: 18px;
+            font-weight: bold;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: auto;
+            user-select: none;
+        }
+
+        #slash-button:active {
+            background-color: rgba(255, 20, 147, 0.8);
+            transform: scale(0.95);
+        }
+
+        .player-label {
+            position: absolute;
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            font-weight: bold;
+            color: white;
+            background-color: rgba(0, 0, 0, 0.6);
+            padding: 3px 8px;
+            border-radius: 10px;
+            pointer-events: none;
+            z-index: 6;
+            transform: translate(-50%, -100%);
+            margin-top: -5px;
+        }
     </style>
 </head>
 <body>
@@ -199,6 +337,7 @@
         <ul>
             <li><a href="https://www.lexaloffle.com/bbs/?pid=172533#p" target="_blank">play my game</a></li>
             <li><a href="https://archive.org/details/power-rangers-s-14-e-25-the-hunter-480p-x-265-edge-2020" target="_blank">Power Rangers</a></li>
+            <li><a href="https://www.mushroom.world/" target="_blank">Mushroom World</a></li>
         </ul>
     </div>
     <div id="stats">
@@ -209,8 +348,28 @@
     <img id="logo" src="assets/gadogo.png" alt="Gadogo">
     <canvas id="particle-canvas"></canvas>
     <div id="characters-container"></div>
-    <button id="spawn-button">Add 5 Enemies</button>
-    <button id="control-button">Take Control</button>
+    <div id="top-controls">
+        <button id="spawn-button">Add 5 Enemies</button>
+        <div id="control-panel">
+            <h4>Take Control:</h4>
+            <div class="player-controls">
+                <button class="control-button" data-player="0">Player 1</button>
+                <button class="control-button" data-player="1">Player 2</button>
+                <button class="control-button" data-player="2">Player 3</button>
+                <button class="control-button" data-player="3">Player 4</button>
+            </div>
+        </div>
+    </div>
+    <div id="controls">
+        <strong>Arrow Keys:</strong> Move | <strong>X:</strong> Slash
+    </div>
+    <div id="touch-controls">
+        <div id="joystick-container">
+            <div id="joystick-base"></div>
+            <div id="joystick-stick"></div>
+        </div>
+        <div id="slash-button">SLASH</div>
+    </div>
     <div id="credit">Sprite: <a href="https://www.spriters-resource.com/game_boy_advance/kirbynim/asset/15598/" target="_blank">Kirby Sprites</a></div>
 
     <script>
@@ -247,7 +406,7 @@
         let totalDefeats = 0;
 
         // Player control state
-        let playerControlEnabled = false;
+        const playerControls = [null, null, null, null]; // Which player controls which Kirby (index)
         const keys = {
             ArrowUp: false,
             ArrowDown: false,
@@ -266,13 +425,20 @@
         }
 
         // Create a character object
-        function createCharacter(isNormalColor) {
+        function createCharacter(isNormalColor, playerNum) {
             const canvas = document.createElement('canvas');
             canvas.className = 'character';
             canvas.width = 66;
             canvas.height = 90;
 
             const ctx = canvas.getContext('2d');
+
+            // Create player label
+            const label = document.createElement('div');
+            label.className = 'player-label';
+            label.textContent = `P${playerNum}`;
+            label.style.display = 'none';
+            document.getElementById('characters-container').appendChild(label);
 
             const hue = isNormalColor ? 0 : Math.random() * 360;
 
@@ -300,12 +466,15 @@
                 blinkDuration: 0, // How long to show the blink frame
                 slashFrame: 0,
                 slashAnimationCounter: 0,
-                isPlayer: isNormalColor, // Pink Kirby is the player
+                isPlayer: isNormalColor, // Pink Kirby is player 1 by default
                 followTarget: null, // For follower Kirbys
                 health: 3, // Kirby health
                 maxHealth: 3,
                 invulnerable: false, // Invulnerability frames after respawn
-                invulnerableTimer: 0
+                invulnerableTimer: 0,
+                controlledBy: null, // Which player index controls this Kirby
+                playerNum: playerNum,
+                label: label
             };
 
             // Apply hue rotation filter for random color (skip if normal color)
@@ -467,9 +636,9 @@
             character.vy *= 0.85;
 
             // Handle player control
-            if (character.isPlayer && playerControlEnabled) {
+            if (character.controlledBy !== null) {
                 character.isMoving = false;
-                const moveSpeed = 1;
+                const moveSpeed = character.speed * 0.3; // Match AI speed
 
                 if (keys.ArrowUp) {
                     character.vy -= moveSpeed;
@@ -495,8 +664,8 @@
                     character.slashAnimationCounter = 0;
                 }
             }
-            // Handle follower behavior
-            else if (playerControlEnabled && character.followTarget) {
+            // Handle follower behavior (only if not controlled and there's an active player)
+            else if (hasAnyPlayerControl() && character.followTarget && character.followTarget.controlledBy !== null) {
                 const dx = character.followTarget.x - character.x;
                 const dy = character.followTarget.y - character.y;
                 const distance = Math.sqrt(dx * dx + dy * dy);
@@ -754,8 +923,8 @@
 
                 for (let j = 0; j < enemies.length; j++) {
                     if (checkCollision(characters[i], enemies[j])) {
-                        // Auto-slash for AI Kirbys or all Kirbys in AI mode
-                        if ((!playerControlEnabled || !characters[i].isPlayer) && characters[i].state !== 'slash') {
+                        // Auto-slash for AI Kirbys (not controlled by any player)
+                        if (characters[i].controlledBy === null && characters[i].state !== 'slash') {
                             characters[i].state = 'slash';
                             characters[i].slashFrame = 0;
                             characters[i].slashAnimationCounter = 0;
@@ -804,6 +973,15 @@
                 moveCharacter(character);
                 updateAnimation(character);
                 drawCharacter(character);
+
+                // Update label position and visibility
+                if (character.controlledBy !== null) {
+                    character.label.style.display = 'block';
+                    character.label.style.left = (character.x + 33) + 'px';
+                    character.label.style.top = character.y + 'px';
+                } else {
+                    character.label.style.display = 'none';
+                }
             });
 
             // Update enemies
@@ -837,7 +1015,7 @@
             if (spritesLoaded === totalSprites) {
                 // Create all characters (first one normal color, rest random)
                 for (let i = 0; i < NUM_CHARACTERS; i++) {
-                    characters.push(createCharacter(i === 0));
+                    characters.push(createCharacter(i === 0, i + 1));
                 }
 
                 // Create enemies (mix of crabs and spikes)
@@ -851,6 +1029,11 @@
 
                 gameLoop();
             }
+        }
+
+        // Check if any player has control
+        function hasAnyPlayerControl() {
+            return characters.some(c => c.controlledBy !== null);
         }
 
         // Setup follower chain
@@ -875,19 +1058,47 @@
             }
         }
 
-        // Toggle player control
-        function toggleControl() {
-            playerControlEnabled = !playerControlEnabled;
-            const button = document.getElementById('control-button');
+        // Track which player (if any) is currently controlling
+        let activePlayer = null;
 
-            if (playerControlEnabled) {
-                button.textContent = 'Release Control';
-                button.classList.add('active');
-            } else {
-                button.textContent = 'Take Control';
+        // Toggle player control for a specific Kirby
+        function togglePlayerControl(buttonIndex, button) {
+            const kirbyIndex = parseInt(button.dataset.player);
+            const controls = document.getElementById('controls');
+            const touchControls = document.getElementById('touch-controls');
+
+            // Check if this button is already active (this player is controlling this Kirby)
+            if (button.classList.contains('active')) {
+                // Release control
+                characters[kirbyIndex].controlledBy = null;
                 button.classList.remove('active');
-                // Reset X key when releasing control
+                activePlayer = null;
+
+                // Hide controls if no one is controlling anything
+                if (!hasAnyPlayerControl()) {
+                    controls.classList.remove('show');
+                    touchControls.classList.remove('show');
+                }
+
+                // Reset X key
                 keys.x = false;
+            } else {
+                // Check if a player is already controlling a Kirby
+                if (activePlayer !== null) {
+                    // Release the previously controlled Kirby
+                    characters[activePlayer].controlledBy = null;
+                    const prevButton = document.querySelector(`.control-button[data-player="${activePlayer}"]`);
+                    if (prevButton) {
+                        prevButton.classList.remove('active');
+                    }
+                }
+
+                // Take control of this Kirby
+                characters[kirbyIndex].controlledBy = kirbyIndex;
+                button.classList.add('active');
+                activePlayer = kirbyIndex;
+                controls.classList.add('show');
+                touchControls.classList.add('show');
             }
         }
 
@@ -913,8 +1124,81 @@
         });
 
         // Button click handlers
-        document.getElementById('control-button').addEventListener('click', toggleControl);
+        document.querySelectorAll('.control-button').forEach((button, index) => {
+            button.addEventListener('click', () => togglePlayerControl(index, button));
+        });
         document.getElementById('spawn-button').addEventListener('click', () => spawnEnemies(5));
+
+        // Touch controls for joystick
+        const joystick = document.getElementById('joystick-container');
+        const joystickStick = document.getElementById('joystick-stick');
+        let joystickActive = false;
+        let joystickCenter = { x: 75, y: 75 };
+
+        function handleJoystickMove(x, y) {
+            const dx = x - joystickCenter.x;
+            const dy = y - joystickCenter.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            const maxDistance = 45;
+
+            if (distance > maxDistance) {
+                const angle = Math.atan2(dy, dx);
+                joystickStick.style.left = (joystickCenter.x + Math.cos(angle) * maxDistance - 30) + 'px';
+                joystickStick.style.top = (joystickCenter.y + Math.sin(angle) * maxDistance - 30) + 'px';
+            } else {
+                joystickStick.style.left = (x - 30) + 'px';
+                joystickStick.style.top = (y - 30) + 'px';
+            }
+
+            // Convert to key presses
+            keys.ArrowUp = dy < -10;
+            keys.ArrowDown = dy > 10;
+            keys.ArrowLeft = dx < -10;
+            keys.ArrowRight = dx > 10;
+        }
+
+        function resetJoystick() {
+            joystickStick.style.left = '45px';
+            joystickStick.style.top = '45px';
+            keys.ArrowUp = false;
+            keys.ArrowDown = false;
+            keys.ArrowLeft = false;
+            keys.ArrowRight = false;
+        }
+
+        joystick.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            joystickActive = true;
+        });
+
+        joystick.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            if (joystickActive) {
+                const touch = e.touches[0];
+                const rect = joystick.getBoundingClientRect();
+                const x = touch.clientX - rect.left;
+                const y = touch.clientY - rect.top;
+                handleJoystickMove(x, y);
+            }
+        });
+
+        joystick.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            joystickActive = false;
+            resetJoystick();
+        });
+
+        // Touch control for slash button
+        const slashButton = document.getElementById('slash-button');
+        slashButton.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            keys.x = true;
+        });
+
+        slashButton.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            keys.x = false;
+        });
 
         // Start when all sprites load
         walkSprite.onload = checkAllSpritesLoaded;
