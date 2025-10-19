@@ -14,10 +14,28 @@
             background-color: #87CEEB;
         }
 
+        #particle-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 5;
+        }
+
         .character {
             position: absolute;
-            width: 33px;
-            height: 45px;
+            width: 66px;
+            height: 90px;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+        }
+
+        .enemy {
+            position: absolute;
+            width: 64px;
+            height: 64px;
             image-rendering: pixelated;
             image-rendering: crisp-edges;
         }
@@ -89,6 +107,90 @@
         #link-list a:hover {
             text-decoration: underline;
         }
+
+        #control-button {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            padding: 12px 24px;
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+            font-weight: bold;
+            background-color: #ff69b4;
+            color: white;
+            border: 3px solid #ff1493;
+            border-radius: 8px;
+            cursor: pointer;
+            z-index: 10;
+            transition: all 0.2s;
+        }
+
+        #control-button:hover {
+            background-color: #ff1493;
+            transform: scale(1.05);
+        }
+
+        #control-button.active {
+            background-color: #32cd32;
+            border-color: #228b22;
+        }
+
+        #control-button.active:hover {
+            background-color: #228b22;
+        }
+
+        #spawn-button {
+            position: absolute;
+            bottom: 70px;
+            right: 20px;
+            padding: 12px 24px;
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+            font-weight: bold;
+            background-color: #ff8c00;
+            color: white;
+            border: 3px solid #ff6600;
+            border-radius: 8px;
+            cursor: pointer;
+            z-index: 10;
+            transition: all 0.2s;
+        }
+
+        #spawn-button:hover {
+            background-color: #ff6600;
+            transform: scale(1.05);
+        }
+
+        #stats {
+            position: absolute;
+            bottom: 120px;
+            right: 20px;
+            font-family: Arial, sans-serif;
+            background-color: rgba(255, 255, 255, 0.9);
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            z-index: 10;
+            min-width: 150px;
+        }
+
+        #stats h3 {
+            margin: 0 0 10px 0;
+            font-size: 16px;
+            color: #333;
+            text-align: center;
+        }
+
+        #stats div {
+            margin: 5px 0;
+            font-size: 14px;
+            color: #666;
+        }
+
+        #stats .stat-value {
+            font-weight: bold;
+            color: #333;
+        }
     </style>
 </head>
 <body>
@@ -96,10 +198,19 @@
         <h3>Ga-do-go's favorite things</h3>
         <ul>
             <li><a href="https://www.lexaloffle.com/bbs/?pid=172533#p" target="_blank">play my game</a></li>
+            <li><a href="https://archive.org/details/power-rangers-s-14-e-25-the-hunter-480p-x-265-edge-2020" target="_blank">Power Rangers</a></li>
         </ul>
     </div>
+    <div id="stats">
+        <h3>Stats</h3>
+        <div>Deaths: <span class="stat-value" id="deaths">0</span></div>
+        <div>Enemies Defeated: <span class="stat-value" id="defeats">0</span></div>
+    </div>
     <img id="logo" src="assets/gadogo.png" alt="Gadogo">
+    <canvas id="particle-canvas"></canvas>
     <div id="characters-container"></div>
+    <button id="spawn-button">Add 5 Enemies</button>
+    <button id="control-button">Take Control</button>
     <div id="credit">Sprite: <a href="https://www.spriters-resource.com/game_boy_advance/kirbynim/asset/15598/" target="_blank">Kirby Sprites</a></div>
 
     <script>
@@ -121,8 +232,29 @@
 
         const characters = [];
         const enemies = [];
-        const NUM_CHARACTERS = 20;
-        const NUM_ENEMIES = 5;
+        const particles = [];
+        const NUM_CHARACTERS = 4;
+        const NUM_ENEMIES = 15;
+
+        // Particle canvas setup
+        const particleCanvas = document.getElementById('particle-canvas');
+        const particleCtx = particleCanvas.getContext('2d');
+        particleCanvas.width = window.innerWidth;
+        particleCanvas.height = window.innerHeight;
+
+        // Stats tracking
+        let totalDeaths = 0;
+        let totalDefeats = 0;
+
+        // Player control state
+        let playerControlEnabled = false;
+        const keys = {
+            ArrowUp: false,
+            ArrowDown: false,
+            ArrowLeft: false,
+            ArrowRight: false,
+            x: false
+        };
 
         // Get viewport dimensions
         function getViewportWidth() {
@@ -134,42 +266,52 @@
         }
 
         // Create a character object
-        function createCharacter() {
+        function createCharacter(isNormalColor) {
             const canvas = document.createElement('canvas');
             canvas.className = 'character';
-            canvas.width = 33;
-            canvas.height = 45;
+            canvas.width = 66;
+            canvas.height = 90;
 
             const ctx = canvas.getContext('2d');
+
+            const hue = isNormalColor ? 0 : Math.random() * 360;
 
             const character = {
                 canvas: canvas,
                 ctx: ctx,
-                x: Math.random() * (getViewportWidth() - 66),
-                y: Math.random() * (getViewportHeight() - 90),
+                x: Math.random() * (getViewportWidth() - 132),
+                y: Math.random() * (getViewportHeight() - 180),
                 vx: 0, // velocity x
                 vy: 0, // velocity y
-                speed: 1 + Math.random() * 2,
+                speed: 0.5 + Math.random() * 1,
                 targetX: Math.random() * getViewportWidth(),
                 targetY: Math.random() * getViewportHeight(),
                 currentFrame: 0,
                 frameWidth: 33,
                 frameHeight: 45,
-                animationSpeed: 0.05 + Math.random() * 0.05,
+                animationSpeed: 0.2, // 12 fps (0.2 * 60fps = 12)
                 animationCounter: 0,
                 isMoving: false,
                 facingRight: true,
-                hue: Math.random() * 360, // Random hue for color variation
+                hue: hue, // Normal color or random hue
                 targetChangeTimer: Math.random() * 120, // Random initial timer
                 state: 'idle', // 'idle', 'walk', or 'slash'
                 blinkTimer: Math.random() * 180 + 120, // Random timer for idle blink
                 blinkDuration: 0, // How long to show the blink frame
                 slashFrame: 0,
-                slashAnimationCounter: 0
+                slashAnimationCounter: 0,
+                isPlayer: isNormalColor, // Pink Kirby is the player
+                followTarget: null, // For follower Kirbys
+                health: 3, // Kirby health
+                maxHealth: 3,
+                invulnerable: false, // Invulnerability frames after respawn
+                invulnerableTimer: 0
             };
 
-            // Apply hue rotation filter for random color
-            canvas.style.filter = `hue-rotate(${character.hue}deg)`;
+            // Apply hue rotation filter for random color (skip if normal color)
+            if (!isNormalColor) {
+                canvas.style.filter = `hue-rotate(${character.hue}deg)`;
+            }
 
             document.getElementById('characters-container').appendChild(canvas);
             return character;
@@ -178,9 +320,9 @@
         // Create an enemy object
         function createEnemy(type) {
             const canvas = document.createElement('canvas');
-            canvas.className = 'character';
-            canvas.width = 32;
-            canvas.height = 32;
+            canvas.className = 'enemy';
+            canvas.width = 64;
+            canvas.height = 64;
 
             const ctx = canvas.getContext('2d');
 
@@ -188,15 +330,17 @@
                 type: type, // 'crab' or 'spike'
                 canvas: canvas,
                 ctx: ctx,
-                x: Math.random() * (getViewportWidth() - 64),
-                y: Math.random() * (getViewportHeight() - 64),
+                x: Math.random() * (getViewportWidth() - 128),
+                y: Math.random() * (getViewportHeight() - 128),
                 vx: 0, // velocity x
                 vy: 0, // velocity y
                 speed: 0.5 + Math.random() * 1.5,
-                targetX: Math.random() * getViewportWidth(),
-                targetY: Math.random() * getViewportHeight(),
+                targetX: Math.random() * (getViewportWidth() - 128),
+                targetY: Math.random() * (getViewportHeight() - 128),
                 facingRight: true,
-                targetChangeTimer: Math.random() * 120
+                targetChangeTimer: Math.random() * 120,
+                health: 3, // Enemy health
+                maxHealth: 3
             };
 
             document.getElementById('characters-container').appendChild(canvas);
@@ -322,30 +466,84 @@
             character.vx *= 0.85;
             character.vy *= 0.85;
 
-            const dx = character.targetX - character.x;
-            const dy = character.targetY - character.y;
-            const distance = Math.sqrt(dx * dx + dy * dy);
-
-            if (distance > 5) {
-                character.isMoving = true;
-                const angle = Math.atan2(dy, dx);
-                character.vx += Math.cos(angle) * character.speed * 0.3;
-                character.vy += Math.sin(angle) * character.speed * 0.3;
-
-                if (dx > 0) {
-                    character.facingRight = true;
-                } else if (dx < 0) {
-                    character.facingRight = false;
-                }
-            } else {
+            // Handle player control
+            if (character.isPlayer && playerControlEnabled) {
                 character.isMoving = false;
+                const moveSpeed = 1;
 
-                // Pick a new random target when reaching the current one
-                character.targetChangeTimer--;
-                if (character.targetChangeTimer <= 0) {
-                    character.targetX = Math.random() * (getViewportWidth() - 64);
-                    character.targetY = Math.random() * (getViewportHeight() - 64);
-                    character.targetChangeTimer = 60 + Math.random() * 120;
+                if (keys.ArrowUp) {
+                    character.vy -= moveSpeed;
+                    character.isMoving = true;
+                }
+                if (keys.ArrowDown) {
+                    character.vy += moveSpeed;
+                    character.isMoving = true;
+                }
+                if (keys.ArrowLeft) {
+                    character.vx -= moveSpeed;
+                    character.facingRight = false;
+                    character.isMoving = true;
+                }
+                if (keys.ArrowRight) {
+                    character.vx += moveSpeed;
+                    character.facingRight = true;
+                    character.isMoving = true;
+                }
+                if (keys.x && character.state !== 'slash') {
+                    character.state = 'slash';
+                    character.slashFrame = 0;
+                    character.slashAnimationCounter = 0;
+                }
+            }
+            // Handle follower behavior
+            else if (playerControlEnabled && character.followTarget) {
+                const dx = character.followTarget.x - character.x;
+                const dy = character.followTarget.y - character.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+
+                // Follow at a distance
+                if (distance > 100) {
+                    character.isMoving = true;
+                    const angle = Math.atan2(dy, dx);
+                    character.vx += Math.cos(angle) * character.speed * 0.4;
+                    character.vy += Math.sin(angle) * character.speed * 0.4;
+
+                    if (dx > 0) {
+                        character.facingRight = true;
+                    } else if (dx < 0) {
+                        character.facingRight = false;
+                    }
+                } else {
+                    character.isMoving = false;
+                }
+            }
+            // Normal AI behavior
+            else {
+                const dx = character.targetX - character.x;
+                const dy = character.targetY - character.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+
+                if (distance > 5) {
+                    character.isMoving = true;
+                    const angle = Math.atan2(dy, dx);
+                    character.vx += Math.cos(angle) * character.speed * 0.3;
+                    character.vy += Math.sin(angle) * character.speed * 0.3;
+
+                    if (dx > 0) {
+                        character.facingRight = true;
+                    } else if (dx < 0) {
+                        character.facingRight = false;
+                    }
+                } else {
+                    character.isMoving = false;
+
+                    // Pick a new random target when reaching the current one
+                    character.targetChangeTimer--;
+                    if (character.targetChangeTimer <= 0) {
+                        character.targetX = Math.random() * (getViewportWidth() - 132);
+                        character.targetY = Math.random() * (getViewportHeight() - 180);
+                        character.targetChangeTimer = 60 + Math.random() * 120;
+                    }
                 }
             }
 
@@ -354,8 +552,8 @@
             character.y += character.vy;
 
             // Keep within bounds and bounce off edges
-            const maxX = getViewportWidth() - 64;
-            const maxY = getViewportHeight() - 64;
+            const maxX = getViewportWidth() - 132;
+            const maxY = getViewportHeight() - 180;
 
             if (character.x <= 0 || character.x >= maxX) {
                 character.vx *= -0.5; // Bounce with damping
@@ -400,8 +598,8 @@
                 // Pick a new random target when reaching the current one
                 enemy.targetChangeTimer--;
                 if (enemy.targetChangeTimer <= 0) {
-                    enemy.targetX = Math.random() * (getViewportWidth() - 64);
-                    enemy.targetY = Math.random() * (getViewportHeight() - 64);
+                    enemy.targetX = Math.random() * (getViewportWidth() - 128);
+                    enemy.targetY = Math.random() * (getViewportHeight() - 128);
                     enemy.targetChangeTimer = 60 + Math.random() * 120;
                 }
             }
@@ -411,8 +609,8 @@
             enemy.y += enemy.vy;
 
             // Keep within bounds and bounce off edges
-            const maxX = getViewportWidth() - 64;
-            const maxY = getViewportHeight() - 64;
+            const maxX = getViewportWidth() - 128;
+            const maxY = getViewportHeight() - 128;
 
             if (enemy.x <= 0 || enemy.x >= maxX) {
                 enemy.vx *= -0.5; // Bounce with damping
@@ -439,7 +637,7 @@
             const dx = entity1.x - entity2.x;
             const dy = entity1.y - entity2.y;
             const distance = Math.sqrt(dx * dx + dy * dy);
-            return distance < 32; // Collision if within sprite size
+            return distance < 64; // Collision if within sprite size (doubled)
         }
 
         // Handle collision with repulsion
@@ -477,18 +675,123 @@
             }
         }
 
+        // Particle class
+        class Particle {
+            constructor(x, y, color, size = 5) {
+                this.x = x;
+                this.y = y;
+                this.vx = (Math.random() - 0.5) * 8;
+                this.vy = (Math.random() - 0.5) * 8 - 2;
+                this.color = color;
+                this.size = size;
+                this.life = 60;
+                this.maxLife = 60;
+                this.gravity = 0.2;
+            }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.vy += this.gravity;
+                this.life--;
+            }
+
+            draw(ctx) {
+                const opacity = this.life / this.maxLife;
+                ctx.fillStyle = this.color;
+                ctx.globalAlpha = opacity;
+                ctx.fillRect(this.x, this.y, this.size, this.size);
+                ctx.globalAlpha = 1;
+            }
+
+            isAlive() {
+                return this.life > 0;
+            }
+        }
+
+        // Create particle burst
+        function createParticleBurst(x, y, color, count = 20) {
+            for (let i = 0; i < count; i++) {
+                particles.push(new Particle(x, y, color, Math.random() * 6 + 3));
+            }
+        }
+
+        // Respawn character
+        function respawnCharacter(character) {
+            // Create pink particle burst for Kirby death
+            createParticleBurst(character.x + 33, character.y + 45, '#ffb6c1', 25);
+
+            totalDeaths++;
+            document.getElementById('deaths').textContent = totalDeaths;
+
+            character.health = character.maxHealth;
+            character.x = Math.random() * (getViewportWidth() - 132);
+            character.y = Math.random() * (getViewportHeight() - 180);
+            character.vx = 0;
+            character.vy = 0;
+            character.invulnerable = true;
+            character.invulnerableTimer = 120; // 2 seconds of invulnerability
+
+            // Create spawn particle burst
+            createParticleBurst(character.x + 33, character.y + 45, '#90ee90', 15);
+        }
+
         // Check all collisions
         function checkCollisions() {
             // Check each character against each enemy
             for (let i = 0; i < characters.length; i++) {
+                // Update invulnerability timer
+                if (characters[i].invulnerable) {
+                    characters[i].invulnerableTimer--;
+                    if (characters[i].invulnerableTimer <= 0) {
+                        characters[i].invulnerable = false;
+                    }
+                    // Blink effect during invulnerability
+                    characters[i].canvas.style.opacity = Math.floor(characters[i].invulnerableTimer / 5) % 2 === 0 ? '0.5' : '1';
+                } else {
+                    characters[i].canvas.style.opacity = '1';
+                }
+
                 for (let j = 0; j < enemies.length; j++) {
                     if (checkCollision(characters[i], enemies[j])) {
-                        // Trigger slash animation on the character
-                        if (characters[i].state !== 'slash') {
+                        // Auto-slash for AI Kirbys or all Kirbys in AI mode
+                        if ((!playerControlEnabled || !characters[i].isPlayer) && characters[i].state !== 'slash') {
                             characters[i].state = 'slash';
                             characters[i].slashFrame = 0;
                             characters[i].slashAnimationCounter = 0;
                         }
+
+                        // Handle damage
+                        if (characters[i].state === 'slash') {
+                            // Kirby is slashing, damage enemy
+                            enemies[j].health -= 1;
+                            if (enemies[j].health <= 0) {
+                                // Create particle burst based on enemy type
+                                const enemyColor = enemies[j].type === 'crab' ? '#ff6347' : '#9370db';
+                                createParticleBurst(enemies[j].x + 32, enemies[j].y + 32, enemyColor, 30);
+
+                                // Update stats
+                                totalDefeats++;
+                                document.getElementById('defeats').textContent = totalDefeats;
+
+                                // Remove enemy
+                                enemies[j].canvas.remove();
+                                enemies.splice(j, 1);
+                                j--;
+                                continue;
+                            }
+                        } else if (!characters[i].invulnerable) {
+                            // Enemy damages Kirby (only if not invulnerable)
+                            characters[i].health -= 1;
+                            if (characters[i].health <= 0) {
+                                respawnCharacter(characters[i]);
+                            } else {
+                                // Brief invulnerability after taking damage
+                                characters[i].invulnerable = true;
+                                characters[i].invulnerableTimer = 60;
+                            }
+                        }
+
                         handleCollision(characters[i], enemies[j]);
                     }
                 }
@@ -509,6 +812,16 @@
                 drawEnemy(enemy);
             });
 
+            // Update and draw particles
+            particleCtx.clearRect(0, 0, particleCanvas.width, particleCanvas.height);
+            for (let i = particles.length - 1; i >= 0; i--) {
+                particles[i].update();
+                particles[i].draw(particleCtx);
+                if (!particles[i].isAlive()) {
+                    particles.splice(i, 1);
+                }
+            }
+
             // Check collisions
             checkCollisions();
 
@@ -522,9 +835,9 @@
         function checkAllSpritesLoaded() {
             spritesLoaded++;
             if (spritesLoaded === totalSprites) {
-                // Create all characters
+                // Create all characters (first one normal color, rest random)
                 for (let i = 0; i < NUM_CHARACTERS; i++) {
-                    characters.push(createCharacter());
+                    characters.push(createCharacter(i === 0));
                 }
 
                 // Create enemies (mix of crabs and spikes)
@@ -533,9 +846,75 @@
                     enemies.push(createEnemy(type));
                 }
 
+                // Setup follower chain
+                setupFollowers();
+
                 gameLoop();
             }
         }
+
+        // Setup follower chain
+        function setupFollowers() {
+            const playerKirby = characters.find(c => c.isPlayer);
+            const followers = characters.filter(c => !c.isPlayer);
+
+            // Set up following chain
+            followers[0].followTarget = playerKirby;
+            followers[1].followTarget = followers[0];
+            followers[2].followTarget = followers[1];
+        }
+
+        // Spawn more enemies
+        function spawnEnemies(count) {
+            for (let i = 0; i < count; i++) {
+                const type = Math.random() < 0.5 ? 'crab' : 'spike';
+                const enemy = createEnemy(type);
+                enemies.push(enemy);
+                // Create spawn particles
+                createParticleBurst(enemy.x + 32, enemy.y + 32, '#ffd700', 15);
+            }
+        }
+
+        // Toggle player control
+        function toggleControl() {
+            playerControlEnabled = !playerControlEnabled;
+            const button = document.getElementById('control-button');
+
+            if (playerControlEnabled) {
+                button.textContent = 'Release Control';
+                button.classList.add('active');
+            } else {
+                button.textContent = 'Take Control';
+                button.classList.remove('active');
+                // Reset X key when releasing control
+                keys.x = false;
+            }
+        }
+
+        // Keyboard event listeners
+        window.addEventListener('keydown', (e) => {
+            if (e.key in keys) {
+                e.preventDefault();
+                keys[e.key] = true;
+            } else if (e.key.toLowerCase() === 'x') {
+                e.preventDefault();
+                keys.x = true;
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (e.key in keys) {
+                e.preventDefault();
+                keys[e.key] = false;
+            } else if (e.key.toLowerCase() === 'x') {
+                e.preventDefault();
+                keys.x = false;
+            }
+        });
+
+        // Button click handlers
+        document.getElementById('control-button').addEventListener('click', toggleControl);
+        document.getElementById('spawn-button').addEventListener('click', () => spawnEnemies(5));
 
         // Start when all sprites load
         walkSprite.onload = checkAllSpritesLoaded;
@@ -546,27 +925,33 @@
 
         // Handle window resize
         window.addEventListener('resize', () => {
-            const maxX = getViewportWidth() - 64;
-            const maxY = getViewportHeight() - 64;
+            // Resize particle canvas
+            particleCanvas.width = window.innerWidth;
+            particleCanvas.height = window.innerHeight;
+
+            const maxXCharacter = getViewportWidth() - 132;
+            const maxYCharacter = getViewportHeight() - 180;
+            const maxXEnemy = getViewportWidth() - 128;
+            const maxYEnemy = getViewportHeight() - 128;
 
             characters.forEach(character => {
                 // Clamp position to new bounds
-                if (character.x > maxX) character.x = maxX;
-                if (character.y > maxY) character.y = maxY;
+                if (character.x > maxXCharacter) character.x = maxXCharacter;
+                if (character.y > maxYCharacter) character.y = maxYCharacter;
 
                 // Clamp target to new bounds
-                if (character.targetX > maxX) character.targetX = Math.random() * maxX;
-                if (character.targetY > maxY) character.targetY = Math.random() * maxY;
+                if (character.targetX > maxXCharacter) character.targetX = Math.random() * maxXCharacter;
+                if (character.targetY > maxYCharacter) character.targetY = Math.random() * maxYCharacter;
             });
 
             enemies.forEach(enemy => {
                 // Clamp position to new bounds
-                if (enemy.x > maxX) enemy.x = maxX;
-                if (enemy.y > maxY) enemy.y = maxY;
+                if (enemy.x > maxXEnemy) enemy.x = maxXEnemy;
+                if (enemy.y > maxYEnemy) enemy.y = maxYEnemy;
 
                 // Clamp target to new bounds
-                if (enemy.targetX > maxX) enemy.targetX = Math.random() * maxX;
-                if (enemy.targetY > maxY) enemy.targetY = Math.random() * maxY;
+                if (enemy.targetX > maxXEnemy) enemy.targetX = Math.random() * maxXEnemy;
+                if (enemy.targetY > maxYEnemy) enemy.targetY = Math.random() * maxYEnemy;
             });
         });
     </script>
