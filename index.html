@@ -16,8 +16,8 @@
 
         .character {
             position: absolute;
-            width: 32px;
-            height: 32px;
+            width: 33px;
+            height: 45px;
             image-rendering: pixelated;
             image-rendering: crisp-edges;
         }
@@ -100,12 +100,18 @@
     </div>
     <img id="logo" src="assets/gadogo.png" alt="Gadogo">
     <div id="characters-container"></div>
-    <div id="credit">Sprite: <a href="https://www.pixil.art/art/kirby-sprites-e47ffff67cb5be7" target="_blank">Kirby Sprites</a></div>
+    <div id="credit">Sprite: <a href="https://www.spriters-resource.com/game_boy_advance/kirbynim/asset/15598/" target="_blank">Kirby Sprites</a></div>
 
     <script>
         // Load sprite sheets
-        const spriteSheet = new Image();
-        spriteSheet.src = 'assets/kirby walk.png';
+        const walkSprite = new Image();
+        walkSprite.src = 'assets/sword kirby walk.png';
+
+        const idleSprite = new Image();
+        idleSprite.src = 'assets/sword kirby idle.png';
+
+        const slashSprite = new Image();
+        slashSprite.src = 'assets/sword kirby slash.png';
 
         const crabSprite = new Image();
         crabSprite.src = 'assets/crab-enemy.png';
@@ -131,30 +137,35 @@
         function createCharacter() {
             const canvas = document.createElement('canvas');
             canvas.className = 'character';
-            canvas.width = 32;
-            canvas.height = 32;
+            canvas.width = 33;
+            canvas.height = 45;
 
             const ctx = canvas.getContext('2d');
 
             const character = {
                 canvas: canvas,
                 ctx: ctx,
-                x: Math.random() * (getViewportWidth() - 64),
-                y: Math.random() * (getViewportHeight() - 64),
+                x: Math.random() * (getViewportWidth() - 66),
+                y: Math.random() * (getViewportHeight() - 90),
                 vx: 0, // velocity x
                 vy: 0, // velocity y
                 speed: 1 + Math.random() * 2,
                 targetX: Math.random() * getViewportWidth(),
                 targetY: Math.random() * getViewportHeight(),
                 currentFrame: 0,
-                frameWidth: 32,
-                frameHeight: 32,
-                animationSpeed: 0.1 + Math.random() * 0.1,
+                frameWidth: 33,
+                frameHeight: 45,
+                animationSpeed: 0.05 + Math.random() * 0.05,
                 animationCounter: 0,
                 isMoving: false,
                 facingRight: true,
                 hue: Math.random() * 360, // Random hue for color variation
-                targetChangeTimer: Math.random() * 120 // Random initial timer
+                targetChangeTimer: Math.random() * 120, // Random initial timer
+                state: 'idle', // 'idle', 'walk', or 'slash'
+                blinkTimer: Math.random() * 180 + 120, // Random timer for idle blink
+                blinkDuration: 0, // How long to show the blink frame
+                slashFrame: 0,
+                slashAnimationCounter: 0
             };
 
             // Apply hue rotation filter for random color
@@ -195,7 +206,25 @@
         function drawCharacter(character) {
             character.ctx.clearRect(0, 0, character.canvas.width, character.canvas.height);
 
-            let frameX = character.currentFrame * character.frameWidth;
+            let sprite, frameX, spriteWidth, spriteHeight;
+
+            // Select the appropriate sprite sheet and frame based on state
+            if (character.state === 'slash') {
+                sprite = slashSprite;
+                spriteWidth = 41;
+                spriteHeight = 52;
+                frameX = character.slashFrame * spriteWidth;
+            } else if (character.state === 'walk') {
+                sprite = walkSprite;
+                spriteWidth = 33;
+                spriteHeight = 45;
+                frameX = character.currentFrame * spriteWidth;
+            } else { // idle
+                sprite = idleSprite;
+                spriteWidth = 32;
+                spriteHeight = 45;
+                frameX = character.currentFrame * spriteWidth;
+            }
 
             character.ctx.save();
 
@@ -205,9 +234,9 @@
             }
 
             character.ctx.drawImage(
-                spriteSheet,
+                sprite,
                 frameX, 0,
-                character.frameWidth, character.frameHeight,
+                spriteWidth, spriteHeight,
                 0, 0,
                 character.canvas.width, character.canvas.height
             );
@@ -239,17 +268,52 @@
         }
 
         function updateAnimation(character) {
-            if (character.isMoving) {
+            // Handle slash animation
+            if (character.state === 'slash') {
+                character.slashAnimationCounter += 0.2;
+                if (character.slashAnimationCounter >= 1) {
+                    character.slashAnimationCounter = 0;
+                    character.slashFrame++;
+                    if (character.slashFrame >= 5) {
+                        // Slash animation complete, return to previous state
+                        character.state = character.isMoving ? 'walk' : 'idle';
+                        character.slashFrame = 0;
+                    }
+                }
+            }
+            // Handle walk animation
+            else if (character.isMoving) {
+                character.state = 'walk';
                 character.animationCounter += character.animationSpeed;
                 if (character.animationCounter >= 1) {
                     character.animationCounter = 0;
                     character.currentFrame++;
-                    if (character.currentFrame > 3) {
-                        character.currentFrame = 1;
+                    if (character.currentFrame > 11) {
+                        character.currentFrame = 0;
                     }
                 }
-            } else {
-                character.currentFrame = 0;
+            }
+            // Handle idle animation with random blink
+            else {
+                character.state = 'idle';
+
+                // Handle blink duration
+                if (character.blinkDuration > 0) {
+                    character.currentFrame = 1; // Frame 1 is the blink
+                    character.blinkDuration--;
+                    if (character.blinkDuration === 0) {
+                        character.currentFrame = 0;
+                    }
+                } else {
+                    character.currentFrame = 0;
+                    character.blinkTimer--;
+
+                    // Trigger blink
+                    if (character.blinkTimer <= 0) {
+                        character.blinkDuration = 10; // Show blink for 10 frames
+                        character.blinkTimer = Math.random() * 180 + 120; // Reset timer
+                    }
+                }
             }
         }
 
@@ -419,6 +483,12 @@
             for (let i = 0; i < characters.length; i++) {
                 for (let j = 0; j < enemies.length; j++) {
                     if (checkCollision(characters[i], enemies[j])) {
+                        // Trigger slash animation on the character
+                        if (characters[i].state !== 'slash') {
+                            characters[i].state = 'slash';
+                            characters[i].slashFrame = 0;
+                            characters[i].slashAnimationCounter = 0;
+                        }
                         handleCollision(characters[i], enemies[j]);
                     }
                 }
@@ -447,7 +517,7 @@
 
         // Track loaded sprites
         let spritesLoaded = 0;
-        const totalSprites = 3;
+        const totalSprites = 5;
 
         function checkAllSpritesLoaded() {
             spritesLoaded++;
@@ -468,7 +538,9 @@
         }
 
         // Start when all sprites load
-        spriteSheet.onload = checkAllSpritesLoaded;
+        walkSprite.onload = checkAllSpritesLoaded;
+        idleSprite.onload = checkAllSpritesLoaded;
+        slashSprite.onload = checkAllSpritesLoaded;
         crabSprite.onload = checkAllSpritesLoaded;
         spikeSprite.onload = checkAllSpritesLoaded;
 
