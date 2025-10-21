@@ -131,14 +131,14 @@
         }
 
         #take-control-button {
-            padding: 12px 24px;
+            padding: 8px 16px;
             font-family: Arial, sans-serif;
-            font-size: 14px;
+            font-size: 12px;
             font-weight: bold;
             background-color: #ff69b4;
             color: white;
-            border: 3px solid #ff1493;
-            border-radius: 8px;
+            border: 2px solid #ff1493;
+            border-radius: 6px;
             cursor: pointer;
             transition: all 0.2s;
         }
@@ -158,14 +158,14 @@
         }
 
         #spawn-button {
-            padding: 12px 24px;
+            padding: 8px 16px;
             font-family: Arial, sans-serif;
-            font-size: 14px;
+            font-size: 12px;
             font-weight: bold;
             background-color: #ff8c00;
             color: white;
-            border: 3px solid #ff6600;
-            border-radius: 8px;
+            border: 2px solid #ff6600;
+            border-radius: 6px;
             cursor: pointer;
             transition: all 0.2s;
             align-self: center;
@@ -176,39 +176,7 @@
             transform: scale(1.05);
         }
 
-        #stats {
-            position: absolute;
-            bottom: 10px;
-            left: 50%;
-            transform: translateX(-50%);
-            font-family: Arial, sans-serif;
-            background-color: rgba(255, 255, 255, 0.9);
-            padding: 15px;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-            z-index: 10;
-            min-width: 150px;
-        }
-
-        #stats h3 {
-            margin: 0 0 10px 0;
-            font-size: 16px;
-            color: #333;
-            text-align: center;
-        }
-
-        #stats div {
-            margin: 5px 0;
-            font-size: 14px;
-            color: #666;
-        }
-
-        #stats .stat-value {
-            font-weight: bold;
-            color: #333;
-        }
-
-        #controls {
+#controls {
             position: absolute;
             bottom: 10px;
             left: 50%;
@@ -327,11 +295,6 @@
             <li><a href="https://archive.org/details/power-rangers-s-14-e-25-the-hunter-480p-x-265-edge-2020" target="_blank">Power Rangers</a></li>
             <li><a href="https://www.mushroom.world/" target="_blank">Mushrooms</a></li>
         </ul>
-    </div>
-    <div id="stats">
-        <h3>Stats</h3>
-        <div>Deaths: <span class="stat-value" id="deaths">0</span></div>
-        <div>Enemies Defeated: <span class="stat-value" id="defeats">0</span></div>
     </div>
     <img id="logo" src="assets/gadogo.png" alt="Gadogo">
     <canvas id="particle-canvas"></canvas>
@@ -549,13 +512,14 @@
             // Only update position/state from server if we're not controlling this Kirby
             const isControlledByMe = myControlledKirbyId !== null && (char.id || char.remoteId) === myControlledKirbyId;
             if (!isControlledByMe) {
-                // Update position and state
+                // Update position and state (but NOT animation frames - let local animation handle that)
                 char.x = charData.x;
                 char.y = charData.y;
                 char.state = charData.state;
                 char.facingRight = charData.facingRight;
-                char.currentFrame = charData.currentFrame;
-                char.slashFrame = charData.slashFrame;
+                // Don't update animation frames from server - causes glitching
+                // char.currentFrame = charData.currentFrame;
+                // char.slashFrame = charData.slashFrame;
 
                 // Update canvas position
                 char.canvas.style.left = char.x + 'px';
@@ -648,7 +612,7 @@
                 y: Math.random() * (getViewportHeight() - 180),
                 vx: 0, // velocity x
                 vy: 0, // velocity y
-                speed: 0.5 + Math.random() * 1,
+                speed: 1.5 + Math.random() * 1.5,
                 targetX: Math.random() * getViewportWidth(),
                 targetY: Math.random() * getViewportHeight(),
                 currentFrame: 0,
@@ -855,7 +819,7 @@
             // Handle player control (only if controlled by this client)
             if (character.controlledBy === clientId) {
                 character.isMoving = false;
-                const moveSpeed = character.speed * 0.3; // Match AI speed
+                const moveSpeed = character.speed * 0.5; // Faster player movement
 
                 if (keys.ArrowUp) {
                     character.vy -= moveSpeed;
