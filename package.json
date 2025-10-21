@@ -1,0 +1,14 @@
+{
+  "name": "starfighters",
+  "version": "1.0.0",
+  "description": "Multiplayer Kirby game",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "build": "^0.1.4",
+    "express": "^4.18.2",
+    "ws": "^8.14.2"
+  }
+}
