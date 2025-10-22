@@ -345,11 +345,12 @@
 
             const hue = isNormalColor ? 0 : Math.random() * 360;
 
+            const margin = isMobile ? canvas.width : 132;
             const character = {
                 canvas: canvas,
                 ctx: ctx,
-                x: Math.random() * (getViewportWidth() - 132 * SCALE),
-                y: Math.random() * (getViewportHeight() - 180 * SCALE),
+                x: Math.random() * (getViewportWidth() - margin),
+                y: Math.random() * (getViewportHeight() - canvas.height),
                 vx: 0, // velocity x
                 vy: 0, // velocity y
                 speed: (1.5 + Math.random() * 1.5) * SPEED_MULTIPLIER,
@@ -395,17 +396,18 @@
 
             const ctx = canvas.getContext('2d');
 
+            const margin = isMobile ? canvas.width : 128;
             const enemy = {
                 type: type, // 'crab' or 'spike'
                 canvas: canvas,
                 ctx: ctx,
-                x: Math.random() * (getViewportWidth() - 128 * SCALE),
-                y: Math.random() * (getViewportHeight() - 128 * SCALE),
+                x: Math.random() * (getViewportWidth() - margin),
+                y: Math.random() * (getViewportHeight() - canvas.height),
                 vx: 0, // velocity x
                 vy: 0, // velocity y
                 speed: (0.5 + Math.random() * 1.5) * SPEED_MULTIPLIER,
-                targetX: Math.random() * (getViewportWidth() - 128 * SCALE),
-                targetY: Math.random() * (getViewportHeight() - 128 * SCALE),
+                targetX: Math.random() * (getViewportWidth() - margin),
+                targetY: Math.random() * (getViewportHeight() - canvas.height),
                 facingRight: true,
                 targetChangeTimer: Math.random() * 120,
                 health: 3, // Enemy health
@@ -554,7 +556,7 @@
             // Handle player control (only first Kirby)
             if (index === 0) {
                 character.isMoving = false;
-                const moveSpeed = character.speed * 0.5; // Faster player movement
+                const moveSpeed = character.speed * 0.3; // Player movement speed
 
                 if (keys.ArrowUp) {
                     character.vy -= moveSpeed;
@@ -652,8 +654,10 @@
             character.y += character.vy;
 
             // Keep within bounds and bounce off edges
-            const maxX = getViewportWidth() - 132 * SCALE;
-            const maxY = getViewportHeight() - 180 * SCALE;
+            // On mobile, use full screen width; on desktop, leave margin for sprite
+            const margin = isMobile ? character.canvas.width : 132;
+            const maxX = getViewportWidth() - margin;
+            const maxY = getViewportHeight() - character.canvas.height;
 
             if (character.x <= 0 || character.x >= maxX) {
                 character.vx *= -0.5; // Bounce with damping
@@ -698,8 +702,9 @@
                 // Pick a new random target when reaching the current one
                 enemy.targetChangeTimer--;
                 if (enemy.targetChangeTimer <= 0) {
-                    enemy.targetX = Math.random() * (getViewportWidth() - 128 * SCALE);
-                    enemy.targetY = Math.random() * (getViewportHeight() - 128 * SCALE);
+                    const margin = isMobile ? enemy.canvas.width : 128;
+                    enemy.targetX = Math.random() * (getViewportWidth() - margin);
+                    enemy.targetY = Math.random() * (getViewportHeight() - enemy.canvas.height);
                     enemy.targetChangeTimer = 60 + Math.random() * 120;
                 }
             }
@@ -709,8 +714,10 @@
             enemy.y += enemy.vy;
 
             // Keep within bounds and bounce off edges
-            const maxX = getViewportWidth() - 128 * SCALE;
-            const maxY = getViewportHeight() - 128 * SCALE;
+            // On mobile, use full screen width; on desktop, leave margin for sprite
+            const margin = isMobile ? enemy.canvas.width : 128;
+            const maxX = getViewportWidth() - margin;
+            const maxY = getViewportHeight() - enemy.canvas.height;
 
             if (enemy.x <= 0 || enemy.x >= maxX) {
                 enemy.vx *= -0.5; // Bounce with damping
@@ -1079,29 +1086,32 @@
             particleCanvas.width = window.innerWidth;
             particleCanvas.height = window.innerHeight;
 
-            const maxXCharacter = getViewportWidth() - 132 * SCALE;
-            const maxYCharacter = getViewportHeight() - 180 * SCALE;
-            const maxXEnemy = getViewportWidth() - 128 * SCALE;
-            const maxYEnemy = getViewportHeight() - 128 * SCALE;
-
             characters.forEach(character => {
+                const margin = isMobile ? character.canvas.width : 132;
+                const maxX = getViewportWidth() - margin;
+                const maxY = getViewportHeight() - character.canvas.height;
+
                 // Clamp position to new bounds
-                if (character.x > maxXCharacter) character.x = maxXCharacter;
-                if (character.y > maxYCharacter) character.y = maxYCharacter;
+                if (character.x > maxX) character.x = maxX;
+                if (character.y > maxY) character.y = maxY;
 
                 // Clamp target to new bounds
-                if (character.targetX > maxXCharacter) character.targetX = Math.random() * maxXCharacter;
-                if (character.targetY > maxYCharacter) character.targetY = Math.random() * maxYCharacter;
+                if (character.targetX > maxX) character.targetX = Math.random() * maxX;
+                if (character.targetY > maxY) character.targetY = Math.random() * maxY;
             });
 
             enemies.forEach(enemy => {
+                const margin = isMobile ? enemy.canvas.width : 128;
+                const maxX = getViewportWidth() - margin;
+                const maxY = getViewportHeight() - enemy.canvas.height;
+
                 // Clamp position to new bounds
-                if (enemy.x > maxXEnemy) enemy.x = maxXEnemy;
-                if (enemy.y > maxYEnemy) enemy.y = maxYEnemy;
+                if (enemy.x > maxX) enemy.x = maxX;
+                if (enemy.y > maxY) enemy.y = maxY;
 
                 // Clamp target to new bounds
-                if (enemy.targetX > maxXEnemy) enemy.targetX = Math.random() * maxXEnemy;
-                if (enemy.targetY > maxYEnemy) enemy.targetY = Math.random() * maxYEnemy;
+                if (enemy.targetX > maxX) enemy.targetX = Math.random() * maxX;
+                if (enemy.targetY > maxY) enemy.targetY = Math.random() * maxY;
             });
         });
     </script>
