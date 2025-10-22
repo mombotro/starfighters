@@ -135,6 +135,14 @@
             max-width: 90%;
         }
 
+        /* Move spawn button to bottom on mobile */
+        @media (max-width: 768px) {
+            #top-controls {
+                top: auto;
+                bottom: 200px;
+            }
+        }
+
         #spawn-button {
             padding: 8px 16px;
             font-family: Arial, sans-serif;
@@ -438,8 +446,8 @@
                 character.ctx.scale(-1, 1);
             }
 
-            // Scale all sprites to 2x their original size
-            const scale = 2;
+            // Scale all sprites to 2x their original size (adjusted for mobile)
+            const scale = 2 * SCALE;
             const drawWidth = spriteWidth * scale;
             const drawHeight = spriteHeight * scale;
 
@@ -449,7 +457,7 @@
 
             // Adjust position for slash to align with idle/walk
             if (character.state === 'slash') {
-                offsetY += 4; // Move slash down by 1 pixel
+                offsetY += 4 * SCALE; // Move slash down by 1 pixel (scaled)
             }
 
             character.ctx.drawImage(
