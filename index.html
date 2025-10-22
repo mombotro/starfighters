@@ -122,41 +122,6 @@
             max-width: 90%;
         }
 
-        #control-panel {
-            font-family: Arial, sans-serif;
-            background-color: rgba(255, 255, 255, 0.9);
-            padding: 15px;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-        }
-
-        #take-control-button {
-            padding: 8px 16px;
-            font-family: Arial, sans-serif;
-            font-size: 12px;
-            font-weight: bold;
-            background-color: #ff69b4;
-            color: white;
-            border: 2px solid #ff1493;
-            border-radius: 6px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        #take-control-button:hover {
-            background-color: #ff1493;
-            transform: scale(1.05);
-        }
-
-        #take-control-button.active {
-            background-color: #32cd32;
-            border-color: #228b22;
-        }
-
-        #take-control-button.active:hover {
-            background-color: #228b22;
-        }
-
         #spawn-button {
             padding: 8px 16px;
             font-family: Arial, sans-serif;
@@ -190,11 +155,6 @@
             font-size: 14px;
             color: #666;
             text-align: center;
-            display: none;
-        }
-
-        #controls.show {
-            display: block;
         }
 
         #controls strong {
@@ -209,11 +169,6 @@
             height: 250px;
             pointer-events: none;
             z-index: 15;
-            display: none;
-        }
-
-        #touch-controls.show {
-            display: block;
         }
 
         #joystick-container {
@@ -270,21 +225,6 @@
             background-color: rgba(255, 20, 147, 0.8);
             transform: scale(0.95);
         }
-
-        .player-label {
-            position: absolute;
-            font-family: Arial, sans-serif;
-            font-size: 12px;
-            font-weight: bold;
-            color: white;
-            background-color: rgba(0, 0, 0, 0.6);
-            padding: 3px 8px;
-            border-radius: 10px;
-            pointer-events: none;
-            z-index: 6;
-            transform: translate(-50%, -100%);
-            margin-top: -5px;
-        }
     </style>
 </head>
 <body>
@@ -301,9 +241,6 @@
     <div id="characters-container"></div>
     <div id="top-controls">
         <button id="spawn-button">Add 5 Enemies</button>
-        <div id="control-panel">
-            <button id="take-control-button" class="control-button">Take Control</button>
-        </div>
     </div>
     <div id="controls">
         <strong>Arrow Keys:</strong> Move | <strong>X:</strong> Slash
@@ -340,235 +277,13 @@
         const NUM_CHARACTERS = 4;
         const NUM_ENEMIES = 15;
 
-        // WebSocket connection for multiplayer
-        let ws = null;
-        let clientId = Math.random().toString(36).substr(2, 9);
-        let isMultiplayer = false;
-
-        function connectWebSocket() {
-            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-            const wsUrl = `${protocol}//${window.location.host}`;
-
-            ws = new WebSocket(wsUrl);
-
-            ws.onopen = () => {
-                console.log('Connected to multiplayer server');
-                isMultiplayer = true;
-            };
-
-            ws.onmessage = (event) => {
-                const data = JSON.parse(event.data);
-                handleServerMessage(data);
-            };
-
-            ws.onclose = () => {
-                console.log('Disconnected from server');
-                isMultiplayer = false;
-                // Try to reconnect after 5 seconds
-                setTimeout(connectWebSocket, 5000);
-            };
-
-            ws.onerror = (error) => {
-                console.error('WebSocket error:', error);
-            };
-        }
-
-        function sendToServer(message) {
-            if (ws && ws.readyState === WebSocket.OPEN) {
-                ws.send(JSON.stringify(message));
-            }
-        }
-
-        let isFirstClient = null; // null = unknown, true = first, false = not first
-
-        function handleServerMessage(data) {
-            switch(data.type) {
-                case 'init':
-                    isFirstClient = data.isFirstClient;
-                    console.log('Connected to server. First client:', isFirstClient);
-
-                    // Try to initialize game now that we know if we're first
-                    tryInitializeGame();
-
-                    // Initial game state from server
-                    if (data.gameState.stats) {
-                        totalDeaths = data.gameState.stats.deaths;
-                        totalDefeats = data.gameState.stats.defeats;
-                        document.getElementById('deaths').textContent = totalDeaths;
-                        document.getElementById('defeats').textContent = totalDefeats;
-                    }
-                    // Load existing characters from server
-                    if (data.gameState.characters && data.gameState.characters.length > 0) {
-                        data.gameState.characters.forEach(charData => {
-                            if (charData.clientId !== clientId) {
-                                updateRemoteCharacter(charData);
-                            }
-                        });
-                    }
-                    // Load existing enemies from server
-                    if (data.gameState.enemies && data.gameState.enemies.length > 0) {
-                        data.gameState.enemies.forEach(enemyData => {
-                            if (!enemies.find(e => e.id === enemyData.id)) {
-                                const enemy = createEnemyFromData(enemyData);
-                                enemies.push(enemy);
-                            }
-                        });
-                    }
-                    break;
-
-                case 'update_character':
-                    // Update character from another client
-                    if (data.clientId !== clientId) {
-                        updateRemoteCharacter(data.character);
-                    }
-                    break;
-
-                case 'update_enemy':
-                    // Update enemy from another client
-                    updateRemoteEnemy(data.enemy);
-                    break;
-
-                case 'remove_enemy':
-                    // Remove enemy
-                    const enemyIndex = enemies.findIndex(e => e.id === data.enemyId);
-                    if (enemyIndex !== -1) {
-                        enemies[enemyIndex].canvas.remove();
-                        enemies.splice(enemyIndex, 1);
-                    }
-                    break;
-
-                case 'spawn_enemies':
-                    // Spawn new enemies from another client
-                    if (data.clientId !== clientId) {
-                        data.enemies.forEach(enemyData => {
-                            const enemy = createEnemyFromData(enemyData);
-                            enemies.push(enemy);
-                        });
-                    }
-                    break;
-
-                case 'update_stats':
-                    totalDeaths = data.stats.deaths;
-                    totalDefeats = data.stats.defeats;
-                    document.getElementById('deaths').textContent = totalDeaths;
-                    document.getElementById('defeats').textContent = totalDefeats;
-                    break;
-
-                case 'particle_burst':
-                    if (data.clientId !== clientId) {
-                        createParticleBurst(data.x, data.y, data.color, data.count, false);
-                    }
-                    break;
-
-                case 'control_change':
-                    // Handle control changes from other clients
-                    if (data.clientId !== clientId) {
-                        if (data.action === 'take' && data.kirbyId) {
-                            // Find the character by ID and mark as controlled by that client
-                            const char = characters.find(c => c.id === data.kirbyId || c.remoteId === data.kirbyId);
-                            if (char) {
-                                char.controlledBy = data.clientId; // Store WHO controls it
-                                console.log('Remote client', data.clientId, 'took control of Kirby:', data.kirbyId);
-                            }
-                        } else if (data.action === 'release' && data.kirbyId) {
-                            // Find and release this specific character
-                            const char = characters.find(c => c.id === data.kirbyId || c.remoteId === data.kirbyId);
-                            if (char) {
-                                char.controlledBy = null;
-                                console.log('Remote client released control of Kirby:', data.kirbyId);
-                            }
-                        }
-                    }
-                    break;
-            }
-        }
-
-        function updateRemoteCharacter(charData) {
-            // Find or create remote character
-            // Check both id and remoteId to match characters from any client
-            let char = characters.find(c => (c.id === charData.id) || (c.remoteId === charData.id));
-            if (!char) {
-                // Use playerNum from charData if available, otherwise use characters.length + 1
-                const playerNum = charData.playerNum || (characters.length + 1);
-
-                // Create a new remote character
-                char = createCharacter(false, playerNum);
-                char.remoteId = charData.id;
-                char.isRemote = true;
-                char.id = charData.id;
-                // Apply the hue from remote character
-                if (charData.hue !== undefined) {
-                    char.hue = charData.hue;
-                    char.canvas.style.filter = `hue-rotate(${char.hue}deg)`;
-                }
-                // Remove label for remote characters
-                if (char.label) {
-                    char.label.remove();
-                    char.label = null;
-                }
-                characters.push(char);
-            }
-
-            // Only update position/state from server if we're not controlling this Kirby
-            const isControlledByMe = myControlledKirbyId !== null && (char.id || char.remoteId) === myControlledKirbyId;
-            if (!isControlledByMe) {
-                // Update position and state (but NOT animation frames - let local animation handle that)
-                char.x = charData.x;
-                char.y = charData.y;
-                char.state = charData.state;
-                char.facingRight = charData.facingRight;
-                // Don't update animation frames from server - causes glitching
-                // char.currentFrame = charData.currentFrame;
-                // char.slashFrame = charData.slashFrame;
-
-                // Update canvas position
-                char.canvas.style.left = char.x + 'px';
-                char.canvas.style.top = char.y + 'px';
-            }
-
-            // Always update controlledBy status from server
-            char.controlledBy = charData.controlledBy;
-        }
-
-        function updateRemoteEnemy(enemyData) {
-            let enemy = enemies.find(e => e.id === enemyData.id);
-            if (!enemy) {
-                enemy = createEnemyFromData(enemyData);
-                enemies.push(enemy);
-            }
-            enemy.x = enemyData.x;
-            enemy.y = enemyData.y;
-            enemy.facingRight = enemyData.facingRight;
-
-            // Update canvas position
-            enemy.canvas.style.left = enemy.x + 'px';
-            enemy.canvas.style.top = enemy.y + 'px';
-        }
-
-        function createEnemyFromData(data) {
-            const enemy = createEnemy(data.type);
-            enemy.id = data.id;
-            enemy.x = data.x;
-            enemy.y = data.y;
-            enemy.facingRight = data.facingRight;
-            return enemy;
-        }
-
-        // Try to connect to WebSocket server
-        connectWebSocket();
-
         // Particle canvas setup
         const particleCanvas = document.getElementById('particle-canvas');
         const particleCtx = particleCanvas.getContext('2d');
         particleCanvas.width = window.innerWidth;
         particleCanvas.height = window.innerHeight;
 
-        // Stats tracking
-        let totalDeaths = 0;
-        let totalDefeats = 0;
-
         // Player control state
-        const playerControls = [null, null, null, null]; // Which player controls which Kirby (index)
         const keys = {
             ArrowUp: false,
             ArrowDown: false,
@@ -587,7 +302,7 @@
         }
 
         // Create a character object
-        function createCharacter(isNormalColor, playerNum) {
+        function createCharacter(isNormalColor) {
             const canvas = document.createElement('canvas');
             canvas.className = 'character';
             canvas.width = 82;
@@ -595,17 +310,9 @@
 
             const ctx = canvas.getContext('2d');
 
-            // Create player label
-            const label = document.createElement('div');
-            label.className = 'player-label';
-            label.textContent = `P${playerNum}`;
-            label.style.display = 'none';
-            document.getElementById('characters-container').appendChild(label);
-
             const hue = isNormalColor ? 0 : Math.random() * 360;
 
             const character = {
-                id: clientId + '_' + Date.now() + '_' + Math.random(),
                 canvas: canvas,
                 ctx: ctx,
                 x: Math.random() * (getViewportWidth() - 132),
@@ -634,11 +341,7 @@
                 health: 3, // Kirby health
                 maxHealth: 3,
                 invulnerable: false, // Invulnerability frames after respawn
-                invulnerableTimer: 0,
-                controlledBy: null, // Which player index controls this Kirby
-                playerNum: playerNum,
-                label: label,
-                isRemote: false
+                invulnerableTimer: 0
             };
 
             // Apply hue rotation filter for random color (skip if normal color)
@@ -660,7 +363,6 @@
             const ctx = canvas.getContext('2d');
 
             const enemy = {
-                id: clientId + '_enemy_' + Date.now() + '_' + Math.random(),
                 type: type, // 'crab' or 'spike'
                 canvas: canvas,
                 ctx: ctx,
@@ -811,47 +513,42 @@
             }
         }
 
-        function moveCharacter(character) {
+        function moveCharacter(character, index) {
             // Apply velocity damping (friction)
             character.vx *= 0.85;
             character.vy *= 0.85;
 
-            // Handle player control (only if controlled by this client)
-            if (character.controlledBy === clientId) {
+            // Handle player control (only first Kirby)
+            if (index === 0) {
                 character.isMoving = false;
                 const moveSpeed = character.speed * 0.5; // Faster player movement
 
                 if (keys.ArrowUp) {
                     character.vy -= moveSpeed;
                     character.isMoving = true;
-                    lastActivityTime = Date.now();
                 }
                 if (keys.ArrowDown) {
                     character.vy += moveSpeed;
                     character.isMoving = true;
-                    lastActivityTime = Date.now();
                 }
                 if (keys.ArrowLeft) {
                     character.vx -= moveSpeed;
                     character.facingRight = false;
                     character.isMoving = true;
-                    lastActivityTime = Date.now();
                 }
                 if (keys.ArrowRight) {
                     character.vx += moveSpeed;
                     character.facingRight = true;
                     character.isMoving = true;
-                    lastActivityTime = Date.now();
                 }
                 if (keys.x && character.state !== 'slash') {
                     character.state = 'slash';
                     character.slashFrame = 0;
                     character.slashAnimationCounter = 0;
-                    lastActivityTime = Date.now();
                 }
             }
-            // Handle follower behavior (only if not controlled and there's an active player)
-            else if (hasAnyPlayerControl() && character.followTarget && character.followTarget.controlledBy !== null) {
+            // Handle follower behavior
+            else if (character.followTarget) {
                 const dx = character.followTarget.x - character.x;
                 const dy = character.followTarget.y - character.y;
                 const distance = Math.sqrt(dx * dx + dy * dy);
@@ -1065,20 +762,9 @@
         }
 
         // Create particle burst
-        function createParticleBurst(x, y, color, count = 20, sendToServerFlag = true) {
+        function createParticleBurst(x, y, color, count = 20) {
             for (let i = 0; i < count; i++) {
                 particles.push(new Particle(x, y, color, Math.random() * 6 + 3));
-            }
-            // Send particle burst to server
-            if (sendToServerFlag) {
-                sendToServer({
-                    type: 'particle_burst',
-                    clientId: clientId,
-                    x: x,
-                    y: y,
-                    color: color,
-                    count: count
-                });
             }
         }
 
@@ -1086,19 +772,6 @@
         function respawnCharacter(character) {
             // Create pink particle burst for Kirby death
             createParticleBurst(character.x + 33, character.y + 45, '#ffb6c1', 25);
-
-            totalDeaths++;
-            document.getElementById('deaths').textContent = totalDeaths;
-
-            // Send stats update to server
-            sendToServer({
-                type: 'update_stats',
-                clientId: clientId,
-                stats: {
-                    deaths: totalDeaths,
-                    defeats: totalDefeats
-                }
-            });
 
             character.health = character.maxHealth;
             character.x = Math.random() * (getViewportWidth() - 132);
@@ -1130,8 +803,8 @@
 
                 for (let j = 0; j < enemies.length; j++) {
                     if (checkCollision(characters[i], enemies[j])) {
-                        // Auto-slash for AI Kirbys (not controlled by any player)
-                        if (characters[i].controlledBy === null && characters[i].state !== 'slash') {
+                        // Auto-slash for AI Kirbys (not the player-controlled one)
+                        if (i !== 0 && characters[i].state !== 'slash') {
                             characters[i].state = 'slash';
                             characters[i].slashFrame = 0;
                             characters[i].slashAnimationCounter = 0;
@@ -1145,28 +818,6 @@
                                 // Create particle burst based on enemy type
                                 const enemyColor = enemies[j].type === 'crab' ? '#ff6347' : '#9370db';
                                 createParticleBurst(enemies[j].x + 32, enemies[j].y + 32, enemyColor, 30);
-
-                                // Update stats
-                                totalDefeats++;
-                                document.getElementById('defeats').textContent = totalDefeats;
-
-                                // Send stats update to server
-                                sendToServer({
-                                    type: 'update_stats',
-                                    clientId: clientId,
-                                    stats: {
-                                        deaths: totalDeaths,
-                                        defeats: totalDefeats
-                                    }
-                                });
-
-                                // Send enemy removal to server
-                                const enemyId = enemies[j].id;
-                                sendToServer({
-                                    type: 'remove_enemy',
-                                    clientId: clientId,
-                                    enemyId: enemyId
-                                });
 
                                 // Remove enemy
                                 enemies[j].canvas.remove();
@@ -1192,96 +843,17 @@
             }
         }
 
-        let updateCounter = 0;
         function gameLoop() {
-            // Check for inactivity timeout
-            if (myControlledKirbyId !== null && (Date.now() - lastActivityTime) > INACTIVITY_TIMEOUT) {
-                console.log('Auto-releasing control due to inactivity');
-                toggleControl(); // Release control
-            }
-
             // Update characters
-            characters.forEach(character => {
-                // Only move/animate if:
-                // 1. Character is local (created by this client), OR
-                // 2. Character is remote but controlled by this client
-                const isControlledByMe = myControlledKirbyId !== null && (character.id || character.remoteId) === myControlledKirbyId;
-                const shouldUpdate = !character.isRemote || isControlledByMe;
-
-                if (shouldUpdate) {
-                    moveCharacter(character);
-                    updateAnimation(character);
-                }
-
+            characters.forEach((character, index) => {
+                moveCharacter(character, index);
+                updateAnimation(character);
                 drawCharacter(character);
-
-                // Update label position and visibility
-                // Show label if this character is controlled by ANYONE
-                if (character.controlledBy !== null) {
-                    // Create label if it doesn't exist (for remote characters)
-                    if (!character.label) {
-                        const label = document.createElement('div');
-                        label.className = 'player-label';
-                        label.textContent = `P${character.playerNum || '?'}`;
-                        document.getElementById('characters-container').appendChild(label);
-                        character.label = label;
-                    }
-                    character.label.style.display = 'block';
-                    character.label.style.left = (character.x + 33) + 'px';
-                    character.label.style.top = character.y + 'px';
-                } else if (character.label) {
-                    character.label.style.display = 'none';
-                }
-
-                // Send updates to server every 3 frames for:
-                // - Local characters (created by this client)
-                // - OR characters controlled by this client (even if remote)
-                const shouldSendUpdate = !character.isRemote || isControlledByMe;
-
-                if (shouldSendUpdate && updateCounter % 3 === 0) {
-                    sendToServer({
-                        type: 'update_character',
-                        clientId: clientId,
-                        character: {
-                            id: character.id || character.remoteId,
-                            x: character.x,
-                            y: character.y,
-                            state: character.state,
-                            facingRight: character.facingRight,
-                            currentFrame: character.currentFrame,
-                            slashFrame: character.slashFrame,
-                            controlledBy: character.controlledBy,
-                            hue: character.hue,
-                            playerNum: character.playerNum
-                        }
-                    });
-                }
             });
 
             // Update enemies
-            enemies.forEach((enemy, index) => {
-                // Only move enemies if they belong to this client (created by this client)
-                const isMyEnemy = enemy.id && enemy.id.startsWith(clientId);
-
-                if (isMyEnemy) {
-                    moveEnemy(enemy);
-
-                    // Send enemy updates periodically (spread out by index to avoid spam)
-                    if (updateCounter % 10 === index % 10) {
-                        sendToServer({
-                            type: 'update_enemy',
-                            clientId: clientId,
-                            enemy: {
-                                id: enemy.id,
-                                type: enemy.type,
-                                x: enemy.x,
-                                y: enemy.y,
-                                facingRight: enemy.facingRight
-                            }
-                        });
-                    }
-                }
-
+            enemies.forEach(enemy => {
+                moveEnemy(enemy);
                 drawEnemy(enemy);
             });
 
@@ -1298,7 +870,6 @@
             // Check collisions
             checkCollisions();
 
-            updateCounter++;
             requestAnimationFrame(gameLoop);
         }
 
@@ -1306,29 +877,14 @@
         let spritesLoaded = 0;
         const totalSprites = 5;
 
-        let spritesReady = false;
-        let gameInitialized = false;
-
         function checkAllSpritesLoaded() {
             spritesLoaded++;
             if (spritesLoaded === totalSprites) {
-                spritesReady = true;
-                console.log('Sprites loaded');
-                tryInitializeGame();
-                gameLoop();
-            }
-        }
+                console.log('Sprites loaded - initializing game');
 
-        function tryInitializeGame() {
-            if (gameInitialized || !spritesReady || isFirstClient === null) return;
-
-            if (isFirstClient === true && characters.length === 0) {
-                console.log('First client - creating game entities');
-                gameInitialized = true;
-
-                // We're the first client, create initial game state
+                // Create initial game state
                 for (let i = 0; i < NUM_CHARACTERS; i++) {
-                    characters.push(createCharacter(i === 0, i + 1));
+                    characters.push(createCharacter(i === 0));
                 }
 
                 // Create enemies (mix of crabs and spikes)
@@ -1339,15 +895,10 @@
 
                 // Setup follower chain
                 setupFollowers();
-            } else if (isFirstClient === false) {
-                console.log('Not first client - waiting for sync');
-                gameInitialized = true;
-            }
-        }
 
-        // Check if any player has control
-        function hasAnyPlayerControl() {
-            return characters.some(c => c.controlledBy !== null);
+                // Start game loop
+                gameLoop();
+            }
         }
 
         // Setup follower chain
@@ -1363,108 +914,12 @@
 
         // Spawn more enemies
         function spawnEnemies(count) {
-            const newEnemies = [];
             for (let i = 0; i < count; i++) {
                 const type = Math.random() < 0.5 ? 'crab' : 'spike';
                 const enemy = createEnemy(type);
                 enemies.push(enemy);
-                newEnemies.push({
-                    id: enemy.id,
-                    type: enemy.type,
-                    x: enemy.x,
-                    y: enemy.y,
-                    facingRight: enemy.facingRight
-                });
                 // Create spawn particles
                 createParticleBurst(enemy.x + 32, enemy.y + 32, '#ffd700', 15);
-            }
-            // Send to server
-            sendToServer({
-                type: 'spawn_enemies',
-                clientId: clientId,
-                enemies: newEnemies
-            });
-        }
-
-        // Track which Kirby this client is controlling (by ID, not index!)
-        let myControlledKirbyId = null;
-        let lastActivityTime = Date.now();
-        const INACTIVITY_TIMEOUT = 30000; // 30 seconds of inactivity releases control
-
-        // Toggle control - take control of next available Kirby
-        function toggleControl() {
-            const button = document.getElementById('take-control-button');
-            const controls = document.getElementById('controls');
-            const touchControls = document.getElementById('touch-controls');
-
-            console.log('toggleControl called. Current myControlledKirbyId:', myControlledKirbyId);
-
-            // If already controlling, release control
-            if (myControlledKirbyId !== null) {
-                console.log('Releasing control of Kirby:', myControlledKirbyId);
-                const char = characters.find(c => (c.id || c.remoteId) === myControlledKirbyId);
-                if (char) {
-                    char.controlledBy = null;
-                    console.log('Set controlledBy to null for character');
-                } else {
-                    console.warn('Could not find character with ID:', myControlledKirbyId);
-                }
-
-                const kirbyId = myControlledKirbyId;
-                myControlledKirbyId = null;
-
-                button.classList.remove('active');
-                button.textContent = 'Take Control';
-                controls.classList.remove('show');
-                touchControls.classList.remove('show');
-
-                // Reset X key
-                keys.x = false;
-
-                // Send control change to server
-                sendToServer({
-                    type: 'control_change',
-                    clientId: clientId,
-                    action: 'release',
-                    kirbyId: kirbyId
-                });
-
-                // Reset activity timer
-                lastActivityTime = Date.now();
-            } else {
-                // Find next available Kirby (one not controlled by anyone)
-                console.log('Total characters:', characters.length);
-                const availableChar = characters.find(c => c.controlledBy === null);
-
-                console.log('Looking for available Kirby. Found:', availableChar ? 'yes' : 'no');
-                console.log('Characters control state:', characters.map(c => ({id: c.id || c.remoteId, controlledBy: c.controlledBy, playerNum: c.playerNum})));
-
-                if (availableChar) {
-                    // Take control of this Kirby
-                    availableChar.controlledBy = clientId;
-                    myControlledKirbyId = availableChar.id || availableChar.remoteId;
-
-                    console.log('Taking control of Kirby:', myControlledKirbyId, 'Player:', availableChar.playerNum);
-
-                    button.classList.add('active');
-                    button.textContent = 'Release Control';
-                    controls.classList.add('show');
-                    touchControls.classList.add('show');
-
-                    // Reset activity timer
-                    lastActivityTime = Date.now();
-
-                    // Send control change to server
-                    sendToServer({
-                        type: 'control_change',
-                        clientId: clientId,
-                        action: 'take',
-                        kirbyId: myControlledKirbyId
-                    });
-                } else {
-                    console.warn('No available Kirbys found!');
-                    alert('All Kirbys are currently being controlled!');
-                }
             }
         }
 
@@ -1490,7 +945,6 @@
         });
 
         // Button click handlers
-        document.getElementById('take-control-button').addEventListener('click', toggleControl);
         document.getElementById('spawn-button').addEventListener('click', () => spawnEnemies(5));
 
         // Touch controls for joystick
