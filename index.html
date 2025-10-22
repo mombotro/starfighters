@@ -139,7 +139,7 @@
         @media (max-width: 768px) {
             #top-controls {
                 top: auto;
-                bottom: 200px;
+                bottom: 10px;
             }
         }
 
@@ -308,7 +308,7 @@
         // Detect mobile device
         const isMobile = window.innerWidth <= 768;
         const SCALE = isMobile ? 0.75 : 1; // 25% smaller on mobile
-        const SPEED_MULTIPLIER = isMobile ? 0.8 : 1; // 20% slower on mobile
+        const SPEED_MULTIPLIER = isMobile ? 0.6 : 1; // 40% slower on mobile
 
         // Particle canvas setup
         const particleCanvas = document.getElementById('particle-canvas');
