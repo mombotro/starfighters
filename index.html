@@ -40,6 +40,19 @@
             image-rendering: crisp-edges;
         }
 
+        /* Mobile optimizations */
+        @media (max-width: 768px) {
+            .character {
+                width: 61px;
+                height: 78px;
+            }
+
+            .enemy {
+                width: 48px;
+                height: 48px;
+            }
+        }
+
         #logo {
             position: absolute;
             top: 20px;
@@ -161,6 +174,13 @@
             color: #333;
         }
 
+        /* Hide keyboard controls on mobile */
+        @media (max-width: 768px) {
+            #controls {
+                display: none;
+            }
+        }
+
         #touch-controls {
             position: fixed;
             bottom: 0;
@@ -277,6 +297,11 @@
         const NUM_CHARACTERS = 4;
         const NUM_ENEMIES = 15;
 
+        // Detect mobile device
+        const isMobile = window.innerWidth <= 768;
+        const SCALE = isMobile ? 0.75 : 1; // 25% smaller on mobile
+        const SPEED_MULTIPLIER = isMobile ? 0.8 : 1; // 20% slower on mobile
+
         // Particle canvas setup
         const particleCanvas = document.getElementById('particle-canvas');
         const particleCtx = particleCanvas.getContext('2d');
@@ -305,8 +330,8 @@
         function createCharacter(isNormalColor) {
             const canvas = document.createElement('canvas');
             canvas.className = 'character';
-            canvas.width = 82;
-            canvas.height = 104;
+            canvas.width = Math.floor(82 * SCALE);
+            canvas.height = Math.floor(104 * SCALE);
 
             const ctx = canvas.getContext('2d');
 
@@ -315,11 +340,11 @@
             const character = {
                 canvas: canvas,
                 ctx: ctx,
-                x: Math.random() * (getViewportWidth() - 132),
-                y: Math.random() * (getViewportHeight() - 180),
+                x: Math.random() * (getViewportWidth() - 132 * SCALE),
+                y: Math.random() * (getViewportHeight() - 180 * SCALE),
                 vx: 0, // velocity x
                 vy: 0, // velocity y
-                speed: 1.5 + Math.random() * 1.5,
+                speed: (1.5 + Math.random() * 1.5) * SPEED_MULTIPLIER,
                 targetX: Math.random() * getViewportWidth(),
                 targetY: Math.random() * getViewportHeight(),
                 currentFrame: 0,
@@ -357,8 +382,8 @@
         function createEnemy(type) {
             const canvas = document.createElement('canvas');
             canvas.className = 'enemy';
-            canvas.width = 64;
-            canvas.height = 64;
+            canvas.width = Math.floor(64 * SCALE);
+            canvas.height = Math.floor(64 * SCALE);
 
             const ctx = canvas.getContext('2d');
 
@@ -366,13 +391,13 @@
                 type: type, // 'crab' or 'spike'
                 canvas: canvas,
                 ctx: ctx,
-                x: Math.random() * (getViewportWidth() - 128),
-                y: Math.random() * (getViewportHeight() - 128),
+                x: Math.random() * (getViewportWidth() - 128 * SCALE),
+                y: Math.random() * (getViewportHeight() - 128 * SCALE),
                 vx: 0, // velocity x
                 vy: 0, // velocity y
-                speed: 0.5 + Math.random() * 1.5,
-                targetX: Math.random() * (getViewportWidth() - 128),
-                targetY: Math.random() * (getViewportHeight() - 128),
+                speed: (0.5 + Math.random() * 1.5) * SPEED_MULTIPLIER,
+                targetX: Math.random() * (getViewportWidth() - 128 * SCALE),
+                targetY: Math.random() * (getViewportHeight() - 128 * SCALE),
                 facingRight: true,
                 targetChangeTimer: Math.random() * 120,
                 health: 3, // Enemy health
@@ -619,8 +644,8 @@
             character.y += character.vy;
 
             // Keep within bounds and bounce off edges
-            const maxX = getViewportWidth() - 132;
-            const maxY = getViewportHeight() - 180;
+            const maxX = getViewportWidth() - 132 * SCALE;
+            const maxY = getViewportHeight() - 180 * SCALE;
 
             if (character.x <= 0 || character.x >= maxX) {
                 character.vx *= -0.5; // Bounce with damping
@@ -665,8 +690,8 @@
                 // Pick a new random target when reaching the current one
                 enemy.targetChangeTimer--;
                 if (enemy.targetChangeTimer <= 0) {
-                    enemy.targetX = Math.random() * (getViewportWidth() - 128);
-                    enemy.targetY = Math.random() * (getViewportHeight() - 128);
+                    enemy.targetX = Math.random() * (getViewportWidth() - 128 * SCALE);
+                    enemy.targetY = Math.random() * (getViewportHeight() - 128 * SCALE);
                     enemy.targetChangeTimer = 60 + Math.random() * 120;
                 }
             }
@@ -676,8 +701,8 @@
             enemy.y += enemy.vy;
 
             // Keep within bounds and bounce off edges
-            const maxX = getViewportWidth() - 128;
-            const maxY = getViewportHeight() - 128;
+            const maxX = getViewportWidth() - 128 * SCALE;
+            const maxY = getViewportHeight() - 128 * SCALE;
 
             if (enemy.x <= 0 || enemy.x >= maxX) {
                 enemy.vx *= -0.5; // Bounce with damping
@@ -704,7 +729,7 @@
             const dx = entity1.x - entity2.x;
             const dy = entity1.y - entity2.y;
             const distance = Math.sqrt(dx * dx + dy * dy);
-            return distance < 64; // Collision if within sprite size (doubled)
+            return distance < 64 * SCALE; // Collision if within sprite size (doubled)
         }
 
         // Handle collision with repulsion
@@ -1046,10 +1071,10 @@
             particleCanvas.width = window.innerWidth;
             particleCanvas.height = window.innerHeight;
 
-            const maxXCharacter = getViewportWidth() - 132;
-            const maxYCharacter = getViewportHeight() - 180;
-            const maxXEnemy = getViewportWidth() - 128;
-            const maxYEnemy = getViewportHeight() - 128;
+            const maxXCharacter = getViewportWidth() - 132 * SCALE;
+            const maxYCharacter = getViewportHeight() - 180 * SCALE;
+            const maxXEnemy = getViewportWidth() - 128 * SCALE;
+            const maxYEnemy = getViewportHeight() - 128 * SCALE;
 
             characters.forEach(character => {
                 // Clamp position to new bounds
