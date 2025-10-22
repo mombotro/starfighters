@@ -166,52 +166,52 @@
             bottom: 0;
             left: 0;
             width: 100%;
-            height: 250px;
+            height: 180px;
             pointer-events: none;
             z-index: 15;
         }
 
         #joystick-container {
             position: absolute;
-            bottom: 20px;
-            left: 20px;
-            width: 150px;
-            height: 150px;
+            bottom: 10px;
+            left: 10px;
+            width: 100px;
+            height: 100px;
             pointer-events: auto;
         }
 
         #joystick-base {
-            width: 150px;
-            height: 150px;
+            width: 100px;
+            height: 100px;
             background-color: rgba(100, 100, 100, 0.3);
-            border: 3px solid rgba(255, 255, 255, 0.5);
+            border: 2px solid rgba(255, 255, 255, 0.5);
             border-radius: 50%;
             position: absolute;
         }
 
         #joystick-stick {
-            width: 60px;
-            height: 60px;
+            width: 40px;
+            height: 40px;
             background-color: rgba(255, 255, 255, 0.6);
-            border: 3px solid rgba(255, 255, 255, 0.8);
+            border: 2px solid rgba(255, 255, 255, 0.8);
             border-radius: 50%;
             position: absolute;
-            top: 45px;
-            left: 45px;
+            top: 30px;
+            left: 30px;
             transition: all 0.1s;
         }
 
         #slash-button {
             position: absolute;
-            bottom: 20px;
-            right: 20px;
-            width: 100px;
-            height: 100px;
+            bottom: 10px;
+            right: 10px;
+            width: 70px;
+            height: 70px;
             background-color: rgba(255, 69, 180, 0.6);
-            border: 4px solid rgba(255, 20, 147, 0.8);
+            border: 3px solid rgba(255, 20, 147, 0.8);
             border-radius: 50%;
             font-family: Arial, sans-serif;
-            font-size: 18px;
+            font-size: 14px;
             font-weight: bold;
             color: white;
             display: flex;
@@ -547,55 +547,70 @@
                     character.slashAnimationCounter = 0;
                 }
             }
-            // Handle follower behavior
+            // AI Kirby behavior - stay close to player but seek fights
             else if (character.followTarget) {
-                const dx = character.followTarget.x - character.x;
-                const dy = character.followTarget.y - character.y;
-                const distance = Math.sqrt(dx * dx + dy * dy);
+                // Check distance to player
+                const playerDx = character.followTarget.x - character.x;
+                const playerDy = character.followTarget.y - character.y;
+                const playerDistance = Math.sqrt(playerDx * playerDx + playerDy * playerDy);
 
-                // Follow at a distance
-                if (distance > 100) {
+                // Find nearest enemy within range
+                let nearestEnemy = null;
+                let nearestEnemyDist = 300; // Only seek enemies within 300px
+
+                for (let i = 0; i < enemies.length; i++) {
+                    const enemyDx = enemies[i].x - character.x;
+                    const enemyDy = enemies[i].y - character.y;
+                    const enemyDist = Math.sqrt(enemyDx * enemyDx + enemyDy * enemyDy);
+
+                    if (enemyDist < nearestEnemyDist) {
+                        nearestEnemyDist = enemyDist;
+                        nearestEnemy = enemies[i];
+                    }
+                }
+
+                // Priority 1: If far from player (>200px), return to player
+                if (playerDistance > 200) {
                     character.isMoving = true;
-                    const angle = Math.atan2(dy, dx);
-                    character.vx += Math.cos(angle) * character.speed * 0.4;
-                    character.vy += Math.sin(angle) * character.speed * 0.4;
+                    const angle = Math.atan2(playerDy, playerDx);
+                    character.vx += Math.cos(angle) * character.speed * 0.5;
+                    character.vy += Math.sin(angle) * character.speed * 0.5;
 
-                    if (dx > 0) {
+                    if (playerDx > 0) {
                         character.facingRight = true;
-                    } else if (dx < 0) {
+                    } else if (playerDx < 0) {
                         character.facingRight = false;
                     }
-                } else {
-                    character.isMoving = false;
                 }
-            }
-            // Normal AI behavior
-            else {
-                const dx = character.targetX - character.x;
-                const dy = character.targetY - character.y;
-                const distance = Math.sqrt(dx * dx + dy * dy);
-
-                if (distance > 5) {
+                // Priority 2: If enemy nearby and not too far from player, attack enemy
+                else if (nearestEnemy && playerDistance < 250) {
                     character.isMoving = true;
-                    const angle = Math.atan2(dy, dx);
+                    const enemyDx = nearestEnemy.x - character.x;
+                    const enemyDy = nearestEnemy.y - character.y;
+                    const angle = Math.atan2(enemyDy, enemyDx);
+                    character.vx += Math.cos(angle) * character.speed * 0.45;
+                    character.vy += Math.sin(angle) * character.speed * 0.45;
+
+                    if (enemyDx > 0) {
+                        character.facingRight = true;
+                    } else if (enemyDx < 0) {
+                        character.facingRight = false;
+                    }
+                }
+                // Priority 3: Stay near player at moderate distance
+                else if (playerDistance > 80) {
+                    character.isMoving = true;
+                    const angle = Math.atan2(playerDy, playerDx);
                     character.vx += Math.cos(angle) * character.speed * 0.3;
                     character.vy += Math.sin(angle) * character.speed * 0.3;
 
-                    if (dx > 0) {
+                    if (playerDx > 0) {
                         character.facingRight = true;
-                    } else if (dx < 0) {
+                    } else if (playerDx < 0) {
                         character.facingRight = false;
                     }
                 } else {
                     character.isMoving = false;
-
-                    // Pick a new random target when reaching the current one
-                    character.targetChangeTimer--;
-                    if (character.targetChangeTimer <= 0) {
-                        character.targetX = Math.random() * (getViewportWidth() - 132);
-                        character.targetY = Math.random() * (getViewportHeight() - 180);
-                        character.targetChangeTimer = 60 + Math.random() * 120;
-                    }
                 }
             }
 
@@ -951,21 +966,21 @@
         const joystick = document.getElementById('joystick-container');
         const joystickStick = document.getElementById('joystick-stick');
         let joystickActive = false;
-        let joystickCenter = { x: 75, y: 75 };
+        let joystickCenter = { x: 50, y: 50 };
 
         function handleJoystickMove(x, y) {
             const dx = x - joystickCenter.x;
             const dy = y - joystickCenter.y;
             const distance = Math.sqrt(dx * dx + dy * dy);
-            const maxDistance = 45;
+            const maxDistance = 30;
 
             if (distance > maxDistance) {
                 const angle = Math.atan2(dy, dx);
-                joystickStick.style.left = (joystickCenter.x + Math.cos(angle) * maxDistance - 30) + 'px';
-                joystickStick.style.top = (joystickCenter.y + Math.sin(angle) * maxDistance - 30) + 'px';
+                joystickStick.style.left = (joystickCenter.x + Math.cos(angle) * maxDistance - 20) + 'px';
+                joystickStick.style.top = (joystickCenter.y + Math.sin(angle) * maxDistance - 20) + 'px';
             } else {
-                joystickStick.style.left = (x - 30) + 'px';
-                joystickStick.style.top = (y - 30) + 'px';
+                joystickStick.style.left = (x - 20) + 'px';
+                joystickStick.style.top = (y - 20) + 'px';
             }
 
             // Convert to key presses
@@ -976,8 +991,8 @@
         }
 
         function resetJoystick() {
-            joystickStick.style.left = '45px';
-            joystickStick.style.top = '45px';
+            joystickStick.style.left = '30px';
+            joystickStick.style.top = '30px';
             keys.ArrowUp = false;
             keys.ArrowDown = false;
             keys.ArrowLeft = false;
