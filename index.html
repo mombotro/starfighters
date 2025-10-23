@@ -591,7 +591,7 @@
 
                 // Find nearest enemy within range
                 let nearestEnemy = null;
-                let nearestEnemyDist = 300; // Only seek enemies within 300px
+                let nearestEnemyDist = 200; // Only seek enemies within 200px (reduced from 300)
 
                 for (let i = 0; i < enemies.length; i++) {
                     const enemyDx = enemies[i].x - character.x;
@@ -604,45 +604,42 @@
                     }
                 }
 
-                // Priority 1: If far from player (>200px), return to player
-                if (playerDistance > 200) {
+                // Priority 1: If far from player (>150px), always return to player
+                if (playerDistance > 150) {
                     character.isMoving = true;
                     const angle = Math.atan2(playerDy, playerDx);
-                    character.vx += Math.cos(angle) * character.speed * 0.5;
-                    character.vy += Math.sin(angle) * character.speed * 0.5;
+                    character.vx += Math.cos(angle) * character.speed * 0.4;
+                    character.vy += Math.sin(angle) * character.speed * 0.4;
 
-                    if (playerDx > 0) {
-                        character.facingRight = true;
-                    } else if (playerDx < 0) {
-                        character.facingRight = false;
+                    // Only change direction if movement is significant
+                    if (Math.abs(playerDx) > 20) {
+                        character.facingRight = playerDx > 0;
                     }
                 }
-                // Priority 2: If enemy nearby and not too far from player, attack enemy
-                else if (nearestEnemy && playerDistance < 250) {
+                // Priority 2: If very close enemy (<100px) and close to player, attack
+                else if (nearestEnemy && nearestEnemyDist < 100 && playerDistance < 120) {
                     character.isMoving = true;
                     const enemyDx = nearestEnemy.x - character.x;
                     const enemyDy = nearestEnemy.y - character.y;
                     const angle = Math.atan2(enemyDy, enemyDx);
-                    character.vx += Math.cos(angle) * character.speed * 0.45;
-                    character.vy += Math.sin(angle) * character.speed * 0.45;
+                    character.vx += Math.cos(angle) * character.speed * 0.35;
+                    character.vy += Math.sin(angle) * character.speed * 0.35;
 
-                    if (enemyDx > 0) {
-                        character.facingRight = true;
-                    } else if (enemyDx < 0) {
-                        character.facingRight = false;
+                    // Only change direction if movement is significant
+                    if (Math.abs(enemyDx) > 20) {
+                        character.facingRight = enemyDx > 0;
                     }
                 }
                 // Priority 3: Stay near player at moderate distance
-                else if (playerDistance > 80) {
+                else if (playerDistance > 60) {
                     character.isMoving = true;
                     const angle = Math.atan2(playerDy, playerDx);
-                    character.vx += Math.cos(angle) * character.speed * 0.3;
-                    character.vy += Math.sin(angle) * character.speed * 0.3;
+                    character.vx += Math.cos(angle) * character.speed * 0.25;
+                    character.vy += Math.sin(angle) * character.speed * 0.25;
 
-                    if (playerDx > 0) {
-                        character.facingRight = true;
-                    } else if (playerDx < 0) {
-                        character.facingRight = false;
+                    // Only change direction if movement is significant
+                    if (Math.abs(playerDx) > 20) {
+                        character.facingRight = playerDx > 0;
                     }
                 } else {
                     character.isMoving = false;
